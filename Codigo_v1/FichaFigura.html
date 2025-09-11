@@ -1,0 +1,1058 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ficha de Figura - CalculArgila</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+  
+  <!-- Fallback para google.script -->
+  <script>
+    if (typeof google === 'undefined') {
+      window.google = {
+        script: {
+          run: null,
+          host: null
+        }
+      };
+    }
+  </script>
+
+</head>
+<style>
+    :root {
+      --primary: #7c4c3e;
+      --secondary: #b87c6d;
+    }
+
+    @page {
+      size: A4 landscape;
+      margin: 15mm;
+    }
+    
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: white;
+      font-size: 11px;
+    }
+    
+    .ficha-container {
+      width: 297mm;
+      height: 210mm;
+      display: grid;
+      grid-template-columns: 45% 55%;
+      gap: 15px;
+      padding: 15px;
+      box-sizing: border-box;
+    }
+    
+    .header {
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid #7c4c3e;
+      padding-bottom: 8px;
+      margin-bottom: 15px;
+      height: 45px;
+    }
+    
+    .logo {
+      height: 40px;
+      object-fit: contain;
+    }
+    
+    .titulo-figura {
+      font-size: 20px;
+      font-weight: bold;
+      color: #7c4c3e;
+      margin: 0;
+      padding: 0 20px;
+    }
+    
+    .seccion-izquierda {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+    
+    .imagen-placeholder {
+    aspect-ratio: 1;
+    border: 2px dashed #ccc;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f9f9f9;
+    position: relative;
+    cursor: pointer;
+    overflow: hidden;
+  }
+
+  .imagen-overlay {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    position: relative;
+  }
+
+    #figuraImagen {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      display: none;
+    }
+
+    #uploadText {
+      position: absolute;
+      text-align: center;
+      color: #666;
+    }
+    
+    .notas {
+      flex: 1;
+      border: 1px solid #ccc;
+      padding: 8px;
+      background: #fff;
+      min-height: 100px;
+    }
+    
+    .notas h3 {
+      margin: 0 0 5px 0;
+      font-size: 12px;
+    }
+    
+    .seccion-derecha {
+      background: #f9f9f9;
+      padding: 10px;
+      border-radius: 4px;
+      overflow: auto;
+    }
+    
+    .tabla-datos {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 10px;
+    }
+    
+    .tabla-datos th {
+      background: #7c4c3e;
+      color: white;
+      text-align: left;
+      padding: 5px;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+    
+    .tabla-datos td {
+      padding: 4px 5px;
+      border-bottom: 1px solid #ddd;
+      vertical-align: top;
+    }
+
+    .tabla-datos tr:nth-child(even) {
+      background: #fff;
+    }
+    
+    .letras {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 4px;
+      font-size: 9px;
+    }
+    
+    .letra-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #f8f8f8;
+      padding: 4px 8px;
+      border-radius: 4px;
+      border: 1px solid #e0e0e0;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+      transition: background-color 0.2s;
+    }
+
+    .letra-item:hover {
+      background: #fff;
+    }
+
+    .letra {
+      color: #7c4c3e;
+      font-weight: 600;
+    }
+
+    .valor {
+      color: #333;
+      font-weight: 500;
+    }
+
+    tr.barreja {
+      background-color: #fff3e0 !important;
+    }
+
+    tr.barreja td {
+      font-style: italic;
+    }
+
+    tr.barreja .letra-item {
+      background: #fff3e0;
+      border-color: #ffe0b2;
+    }
+
+    .tabla-datos th:nth-child(1), 
+    .tabla-datos td:nth-child(1) { width: 20%; }
+    .tabla-datos th:nth-child(2), 
+    .tabla-datos td:nth-child(2) { width: 35%; }
+    .tabla-datos th:nth-child(3), 
+    .tabla-datos td:nth-child(3) { width: 15%; }
+    .tabla-datos th:nth-child(4), 
+    .tabla-datos td:nth-child(4) { width: 30%; }
+
+    #qrcode {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      z-index: 100;
+    }
+
+    .controles {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      display: flex;
+      gap: 10px;
+      z-index: 1000;
+    }
+
+    .btn {
+      padding: 8px 16px;
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 11px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn:hover {
+      background: var(--secondary);
+    }
+
+    .btn i {
+      font-size: 14px;
+    }
+
+    .capture-btn {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background: var(--primary);
+      color: white;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      z-index: 100;
+    }
+
+    .capture-btn:hover {
+      background: var(--secondary);
+    }
+
+    @media print {
+      body {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      
+      .no-print, .btn, .controles {
+        display: none !important;
+      }
+
+      tr.barreja {
+        background-color: #fff3e0 !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+    }
+
+    .qrcode-container {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    z-index: 100;
+  }
+
+  .qrcode-container img {
+    display: block;
+    max-width: 100%;
+    height: auto;
+  }
+
+  /* Actualizar el estilo existente de imagen-placeholder */
+  .imagen-placeholder {
+    aspect-ratio: 1;
+    border: 2px dashed #ccc;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f9f9f9;
+    position: relative;
+    cursor: pointer;
+    overflow: visible;  /* Cambiado de 'hidden' a 'visible' */
+  }
+
+  .imagen-overlay {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    position: relative;
+  }
+
+  /* Estilos de botones mejorados */
+.btn {
+  padding: 8px 16px;
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: background-color 0.2s;
+}
+
+.btn:hover {
+  background: var(--secondary);
+}
+
+.btn i {
+  font-size: 14px;
+}
+
+/* Configuración de página para PDF */
+@page {
+  size: A4 landscape;
+  margin: 15mm;
+}
+
+/* Contenedor principal de la ficha */
+.ficha-container {
+  width: 297mm;
+  height: 210mm;
+  margin: 0;
+  padding: 15mm;
+  box-sizing: border-box;
+}
+
+/* Estilos del spinner */
+#spinner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+}
+
+.spinner-overlay {
+  position: relative;
+}
+
+.spinner {
+  width: 50px;
+  height: 50px;
+  border: 5px solid #f3f3f3;
+  border-top: 5px solid var(--primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Notificaciones */
+.notification {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  padding: 10px 20px;
+  background: var(--primary);
+  color: white;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  z-index: 9999;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.notification.show {
+  opacity: 1;
+}
+
+/* Control de impresión */
+@media print {
+  body {
+    margin: 0;
+    padding: 0;
+  }
+  
+  .ficha-container {
+    margin: 0;
+    padding: 0;
+  }
+
+  .controles, 
+  .btn, 
+  .no-print,
+  #spinner,
+  .notification {
+    display: none !important;
+  }
+}
+
+/* Controles específicos de la ficha */
+.controles {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  gap: 10px;
+  z-index: 1000;
+}
+
+/* Ocultar elementos para la interfaz */
+#inputImagen {
+  display: none;
+}
+
+#qrcode {
+  display: none;
+}
+
+/* Estilos para la imagen cargada */
+#figuraImagen.loaded {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+tr.barreja {
+  background-color: #fff3e0 !important;
+}
+
+tr.barreja td {
+  font-style: italic;
+}
+</style>
+</head>
+<body>
+  <div class="controles no-print">
+    <button class="btn" onclick="window.print()">
+      <i class="fas fa-print"></i> Imprimir
+    </button>
+    <button class="btn qr-btn" onclick="mostrarQR()">
+      <i class="fas fa-qrcode"></i> QR
+    </button>
+    <button class="btn camera-btn" onclick="abrirCamara()">
+      <i class="fas fa-camera"></i> Cámara
+    </button>
+  </div>
+
+  <div class="ficha-container">
+    <header class="header">
+      <img src="https://www.eixoscreativa.com/wp-content/uploads/2024/01/Eixos-creativa.png.webp" alt="Eixos Creativa" class="logo">
+      <h1 class="titulo-figura"><?= figura.name ?></h1>
+    </header>
+    
+    <div class="seccion-izquierda">
+      <div class="imagen-placeholder">
+        <input type="file" id="inputImagen" accept="image/*" title="Seleccionar imagen de la figura">
+        <div class="imagen-overlay">
+          <img id="figuraImagen" alt="Imagen de la figura">
+          <p id="uploadText">Haz clic para cargar imagen</p>
+        </div>
+        <div id="qrcode"></div>
+      </div>
+      
+      <div class="notas">
+        <h3>Notas:</h3>
+        <p contenteditable="true">Añade aquí tus notas...</p>
+      </div>
+    </div>
+    
+    <div class="seccion-derecha">
+      <table class="tabla-datos">
+        <thead>
+          <tr>
+            <th>Parte</th>
+            <th>Detalles</th>
+            <th>Color</th>
+            <th>Letras (Uds)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <? figura.rows.forEach(function(row) { ?>
+            <tr class="<?= row.part.toLowerCase().includes('barreja') ? 'barreja' : '' ?>">
+              <td><?= row.part ?></td>
+              <td><?= row.details ?></td>
+              <td><?= row.color ?></td>
+              <td>
+                <div class="letras">
+                  <? Object.entries(row.letters).forEach(function([letra, cantidad]) { 
+                    if (parseFloat(cantidad) > 0) { 
+                      const valorFormateado = Number.isInteger(parseFloat(cantidad)) ? 
+                        parseInt(cantidad) : 
+                        parseFloat(cantidad).toFixed(1);
+                  ?>
+                    <div class="letra-item">
+                      <span class="letra"><?= letra ?></span>
+                      <span class="valor"><?= valorFormateado ?></span>
+                    </div>
+                  <? }
+                  }); ?>
+                </div>
+              </td>
+            </tr>
+          <? }); ?>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <script>
+const isGoogleScript = typeof google !== 'undefined' && google.script && google.script.run;
+    
+document.addEventListener('DOMContentLoaded', function() {
+  actualizarControles();
+  
+  // Definir Dialog si no existe
+  window.Dialog = {
+    prompt: function(message, defaultValue = '') {
+      return new Promise((resolve) => {
+        const result = prompt(message, defaultValue);
+        resolve(result);
+      });
+    },
+    alert: function(message) {
+      return new Promise((resolve) => {
+        alert(message);
+        resolve();
+      });
+    }
+  };
+
+  // Inicializar eventos y listeners
+  document.querySelector('.imagen-placeholder').addEventListener('click', function(e) {
+    if (e.target.id !== 'figuraImagen' || !document.getElementById('figuraImagen').src) {
+      document.getElementById('inputImagen').click();
+    }
+  });
+
+  document.getElementById('inputImagen').addEventListener('change', function() {
+    cargarImagen(this);
+  });
+
+  // Event listeners para manejar clics en botones sin propagación
+  document.querySelectorAll('.btn').forEach(btn => {
+    btn.addEventListener('click', (e) => e.stopPropagation());
+  });
+});    
+
+/**
+ * Helper function to download HTML file directly in browser
+ */
+function downloadHTML(html, filename) {
+  const blob = new Blob([html], { type: 'text/html' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+/**
+ * Updated exportarFichaHTML function with fallback
+ */
+async function exportarFichaHTML() {
+  try {
+    showSpinner();
+    const figuraNombre = document.querySelector('.titulo-figura').textContent;
+    
+    // Get all styles from the document
+    const styles = Array.from(document.styleSheets)
+      .filter(sheet => !sheet.href) // Only inline styles
+      .map(sheet => {
+        try {
+          return Array.from(sheet.cssRules)
+            .map(rule => rule.cssText)
+            .join('\n');
+        } catch (e) {
+          console.warn('Error accessing cssRules:', e);
+          return '';
+        }
+      })
+      .join('\n');
+    
+    // Clone the container and remove non-printable elements
+    const container = document.querySelector('.ficha-container').cloneNode(true);
+    container.querySelectorAll('.no-print, .btn, .controles').forEach(el => el.remove());
+    
+    // Create complete HTML document
+    const fullHTML = `<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ficha: ${figuraNombre}</title>
+    <style>
+    ${styles}
+    </style>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    ${container.outerHTML}
+</body>
+</html>`;
+
+    if (isGoogleScript) {
+      // If running in Google Apps Script
+      const saveData = {
+        html: fullHTML,
+        nombre: figuraNombre,
+        styles: styles,
+        folderId: '1WPnzZDkrfx7wADU5MzHgMrv6cZ-tTa3G'
+      };
+
+      google.script.run
+        .withSuccessHandler((response) => {
+          hideSpinner();
+          if (response && response.success) {
+            showNotification('Ficha guardada correctamente');
+            if (response.url) {
+              window.open(response.url, '_blank');
+            }
+          }
+        })
+        .withFailureHandler((error) => {
+          hideSpinner();
+          showNotification('Error al guardar la ficha: ' + error);
+        })
+        .guardarFichaHTML(saveData);
+    } else {
+      // Fallback for standalone usage
+      const filename = `Ficha_${figuraNombre.replace(/[^a-zA-Z0-9]/g, '_')}.html`;
+      downloadHTML(fullHTML, filename);
+      hideSpinner();
+      showNotification('Ficha descargada correctamente');
+    }
+
+  } catch (error) {
+    hideSpinner();
+    showNotification('Error: ' + error.message);
+  }
+}
+
+/**
+ * Updated compartirFicha function with fallback
+ */
+async function compartirFicha() {
+  try {
+    if (!isGoogleScript) {
+      showNotification('La función de compartir solo está disponible en Google Apps Script');
+      return;
+    }
+
+    const email = await Dialog.prompt('Introduce el email de la persona con la que quieres compartir:', '');
+    if (!email) return;
+    
+    if (!validateEmail(email)) {
+      showNotification('Por favor, introduce un email válido');
+      return;
+    }
+
+    showSpinner();
+    const figuraNombre = document.querySelector('.titulo-figura').textContent;
+    
+    google.script.run
+      .withSuccessHandler((response) => {
+        hideSpinner();
+        if (response && response.success) {
+          showNotification(`Ficha compartida con ${email}`);
+        }
+      })
+      .withFailureHandler((error) => {
+        hideSpinner();
+        showNotification('Error al compartir la ficha: ' + error);
+      })
+      .compartirFichaHTML({
+        email: email,
+        figuraNombre: figuraNombre,
+        folderId: '1WPnzZDkrfx7wADU5MzHgMrv6cZ-tTa3G'
+      });
+  } catch (error) {
+    hideSpinner();
+    showNotification('Error: ' + error.message);
+  }
+}
+
+/**
+ * Updated actualizarControles function with conditional buttons
+ */
+function actualizarControles() {
+  const controles = document.querySelector('.controles');
+  if (!controles) return;
+  
+  const shareButton = isGoogleScript ? 
+    `<button class="btn" onclick="compartirFicha()">
+      <i class="fas fa-share"></i> Compartir
+    </button>` : '';
+  
+  controles.innerHTML = `
+    <button class="btn" onclick="window.print()">
+      <i class="fas fa-print"></i> Imprimir
+    </button>
+    <button class="btn qr-btn" onclick="mostrarQR()">
+      <i class="fas fa-qrcode"></i> QR
+    </button>
+    <button class="btn camera-btn" onclick="abrirCamara()">
+      <i class="fas fa-camera"></i> Cámara
+    </button>
+    <button class="btn" onclick="exportarFichaHTML()">
+      <i class="fas fa-file-code"></i> Guardar HTML
+    </button>
+    ${shareButton}
+  `;
+}
+
+// Add these helper functions if not already present
+function showSpinner() {
+  let spinner = document.getElementById('spinner');
+  if (!spinner) {
+    spinner = document.createElement('div');
+    spinner.id = 'spinner';
+    spinner.innerHTML = `
+      <div class="spinner-overlay">
+        <div class="spinner"></div>
+      </div>
+    `;
+    document.body.appendChild(spinner);
+  }
+  spinner.style.display = 'flex';
+}
+
+function hideSpinner() {
+  const spinner = document.getElementById('spinner');
+  if (spinner) {
+    spinner.style.display = 'none';
+  }
+}
+
+function showNotification(message, duration = 3000) {
+  const notification = document.createElement('div');
+  notification.className = 'notification';
+  notification.textContent = message;
+  document.body.appendChild(notification);
+  
+  // Force reflow
+  notification.offsetHeight;
+  notification.style.opacity = '1';
+
+  setTimeout(() => {
+    notification.style.opacity = '0';
+    setTimeout(() => {
+      document.body.removeChild(notification);
+    }, 300);
+  }, duration);
+}
+
+// Función auxiliar para validar email
+function validateEmail(email) {
+  const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return re.test(email);
+}
+
+// Sistema de diálogo mejorado
+const Dialog = {
+  prompt: function(message, defaultValue = '') {
+    return new Promise((resolve) => {
+      if (typeof google !== 'undefined' && google.script && google.script.host) {
+        // Usar el diálogo nativo de Google Apps Script
+        google.script.host.prompt(message, defaultValue)
+          .then(resolve)
+          .catch(() => resolve(null));
+      } else {
+        // Usar el prompt del navegador como fallback
+        const result = prompt(message, defaultValue);
+        resolve(result);
+      }
+    });
+  },
+
+  alert: function(message) {
+    return new Promise((resolve) => {
+      if (typeof google !== 'undefined' && google.script && google.script.host) {
+        google.script.host.alert(message)
+          .then(resolve)
+          .catch(resolve);
+      } else {
+        alert(message);
+        resolve();
+      }
+    });
+  }
+};
+
+// Función auxiliar para validar email
+function validateEmail(email) {
+  const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return re.test(email);
+}
+
+   
+    async function abrirCamara() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        const videoElement = document.createElement('video');
+        videoElement.srcObject = stream;
+        videoElement.autoplay = true;
+        videoElement.style.width = '100%';
+        videoElement.style.height = '100%';
+        videoElement.style.objectFit = 'contain';
+        
+        const container = document.querySelector('.imagen-placeholder');
+        const qrcodeDiv = document.getElementById('qrcode');
+        const figuraImagen = document.getElementById('figuraImagen');
+        const uploadText = document.getElementById('uploadText');
+        
+        // Ocultar elementos existentes
+        qrcodeDiv.style.display = 'none';
+        figuraImagen.style.display = 'none';
+        uploadText.style.display = 'none';
+        
+        container.appendChild(videoElement);
+        
+        const captureBtn = document.createElement('button');
+        captureBtn.className = 'btn capture-btn';
+        captureBtn.innerHTML = '<i class="fas fa-camera"></i>';
+        captureBtn.onclick = () => capturarFoto(videoElement, stream);
+        container.appendChild(captureBtn);
+      } catch (err) {
+        console.error('Error accessing camera:', err);
+        alert('No se pudo acceder a la cámara');
+      }
+    }
+
+    function cargarImagen(input) {
+      if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          const img = document.getElementById('figuraImagen');
+          const uploadText = document.getElementById('uploadText');
+          const qrcodeDiv = document.getElementById('qrcode');
+          img.src = e.target.result;
+          img.style.display = 'block';
+          uploadText.style.display = 'none';
+          qrcodeDiv.style.display = 'none';
+        };
+        reader.readAsDataURL(input.files[0]);
+      }
+    }
+
+    function capturarFoto(videoElement, stream) {
+      const canvas = document.createElement('canvas');
+      canvas.width = videoElement.videoWidth;
+      canvas.height = videoElement.videoHeight;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(videoElement, 0, 0);
+      
+      const figuraImagen = document.getElementById('figuraImagen');
+      figuraImagen.src = canvas.toDataURL('image/jpeg');
+      figuraImagen.style.display = 'block';
+      
+      stream.getTracks().forEach(track => track.stop());
+      videoElement.remove();
+      document.querySelector('.capture-btn')?.remove();
+
+      try {
+        canvas.toBlob((blob) => {
+          const formData = new FormData();
+          formData.append('image', blob, 'figura.jpg');
+          
+          google.script.run
+            .withSuccessHandler(() => {
+              console.log('Imagen guardada correctamente');
+            })
+            .withFailureHandler((error) => {
+              console.error('Error al guardar la imagen:', error);
+            })
+            .saveImage(formData);
+        }, 'image/jpeg', 0.8);
+      } catch (err) {
+        console.error('Error al procesar la imagen:', err);
+      }
+    }
+
+    document.getElementById('inputImagen').addEventListener('change', function() {
+      cargarImagen(this);
+    });
+
+    // Event listeners para manejar clics en botones sin propagación
+    document.querySelectorAll('.btn').forEach(btn => {
+      btn.addEventListener('click', (e) => e.stopPropagation());
+    });
+
+    function mostrarQR() {
+  const container = document.querySelector('.imagen-placeholder');
+  const figuraImagen = document.getElementById('figuraImagen');
+  const uploadText = document.getElementById('uploadText');
+  
+  // Eliminar QR anterior si existe
+  const oldQR = document.querySelector('.qrcode-container');
+  if (oldQR) oldQR.remove();
+  
+  // Crear nuevo contenedor para el QR
+  const qrContainer = document.createElement('div');
+  qrContainer.className = 'qrcode-container';
+  container.appendChild(qrContainer);
+  
+  // Ocultar otros elementos
+  figuraImagen.style.display = 'none';
+  uploadText.style.display = 'none';
+
+  // Obtener la URL del script de implementación web
+  // Esta variable la vamos a pasar desde el servidor
+  const scriptUrl = '<?= ScriptApp.getService().getUrl() ?>';
+  const qrUrl = `${scriptUrl}?page=camera`;
+  
+  // Generar nuevo QR
+  new QRCode(qrContainer, {
+    text: qrUrl,
+    width: 256,
+    height: 256,
+    colorDark: "#000000",
+    colorLight: "#ffffff",
+    correctLevel: QRCode.CorrectLevel.H,
+    margin: 4
+  });
+
+  // Añadir botón de cerrar
+  const closeButton = document.createElement('button');
+  closeButton.innerHTML = '×';
+  closeButton.style.cssText = `
+    position: absolute;
+    top: -10px;
+    right: -10px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--primary);
+    color: white;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  `;
+  closeButton.onclick = (e) => {
+    e.stopPropagation();
+    qrContainer.remove();
+    uploadText.style.display = 'block';
+  };
+  qrContainer.appendChild(closeButton);
+}
+  // Variable global con la URL del script
+  const SCRIPT_URL = '<?= ScriptApp.getService().getUrl() ?>';
+  
+  // Modifica la parte del script en FichaFigura.html
+window.addEventListener('message', function(event) {
+  try {
+    if (event.data.type === 'IMAGE_SAVED' && event.data.url) {
+      const figuraImagen = document.getElementById('figuraImagen');
+      const uploadText = document.getElementById('uploadText');
+      const qrcodeDiv = document.getElementById('qrcode');
+      
+      // Limpiar QR si está visible
+      if (qrcodeDiv) {
+        qrcodeDiv.style.display = 'none';
+      }
+      
+      // Configurar y mostrar la imagen
+      figuraImagen.onload = function() {
+        figuraImagen.style.display = 'block';
+        if (uploadText) {
+          uploadText.style.display = 'none';
+        }
+      };
+      
+      figuraImagen.onerror = function() {
+        if (uploadText) {
+          uploadText.textContent = 'Error al cargar la imagen';
+          uploadText.style.display = 'block';
+        }
+        figuraImagen.style.display = 'none';
+      };
+      
+      // Asignar la URL de la imagen
+      figuraImagen.src = event.data.url;
+      
+      // Opcional: Guardar la URL en algún lugar si necesitas referencia posterior
+      figuraImagen.dataset.fileId = event.data.id;
+      figuraImagen.dataset.fileName = event.data.name;
+    }
+  } catch (error) {
+    console.error('Error procesando mensaje:', error);
+  }
+});
+
+// Asegúrate de que la imagen-placeholder esté configurada correctamente
+document.querySelector('.imagen-placeholder').addEventListener('click', function(e) {
+  // Solo manejar el clic si no fue en la imagen ya cargada
+  if (e.target.id !== 'figuraImagen' || !document.getElementById('figuraImagen').src) {
+    document.getElementById('inputImagen').click();
+  }
+});
+  </script>
+</body>
+</html>

@@ -1,0 +1,28 @@
+import_table_html_content = """
+<div class="modal">
+  <div class="modal-content">
+    <h3>Importar Tabla Antigua</h3>
+    <textarea id="tableInput" placeholder="Pega los datos de la tabla aquí"></textarea>
+    <button onclick="processTableData()">Procesar</button>
+    <div id="generatedTable"></div>
+    <button onclick="insertTableData()">Insertar en Tabla Principal</button>
+    <button onclick="this.closest('.modal').remove()">Cerrar</button>
+  </div>
+</div>
+
+<script>
+function processTableData() {
+  const inputData = document.getElementById('tableInput').value;
+  google.script.run.withSuccessHandler(renderGeneratedTable).processImportedTable(inputData);
+}
+
+function renderGeneratedTable(htmlTable) {
+  document.getElementById('generatedTable').innerHTML = htmlTable;
+}
+
+function insertTableData() {
+  google.script.run.insertProcessedTable();
+  document.querySelector('.modal').remove();
+}
+</script>
+"""

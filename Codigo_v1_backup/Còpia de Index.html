@@ -1,0 +1,3139 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <title>CalculArgila - Gestor de Figuras de Arcila</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    /* Definición de variables CSS para mantener la consistencia de colores, tamaños y espaciamiento */
+:root {
+  --primary: #7c4c3e;
+  --secondary: #b87c6d;
+  --accent: #e6b17e;
+  --light: #faf0e6;
+  --dark: #2c1810;
+  --grid-gap: 12px;
+  --border-radius: 6px;
+}
+
+/* Estilos básicos del cuerpo de la página */
+body {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  margin: 0;
+  padding: 20px;
+  background: var(--light);
+  color: var(--dark);
+  height: 100vh;
+  box-sizing: border-box;
+}
+
+/* Contenedor principal utilizando CSS Grid para el layout */
+.container {
+  max-width: 1400px;
+  height: calc(100vh - 40px);
+  margin: 0 auto;
+  display: grid;  
+  grid-template-columns: 250px 1fr;
+  gap: var(--grid-gap);
+}
+
+/* Estilos de la barra lateral */
+.sidebar {
+  background: white;
+  padding: 1rem;
+  border-radius: var(--border-radius);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
+  max-height: 100%;
+  overflow-y: auto;
+}
+
+/* Encabezado de los grupos en la barra lateral */
+.groups-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.25rem;
+}
+
+/* Sección de cada grupo */
+.group-section {
+  margin-bottom: 0.5rem;
+}
+
+/* Encabezado de cada grupo, con estilos interactivos */
+.group-header {
+  background: #b87c6d;
+  padding: 8px 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: white;
+  font-weight: 500;
+  border-radius: 4px;
+}
+
+/* Cambio de color al pasar el cursor sobre el encabezado del grupo */
+.group-header:hover {
+  background: var(--primary);
+}
+
+.group-content {
+  transition: max-height 0.3s ease;
+  max-height: 500px;
+  overflow: hidden;
+}
+
+/* Estado colapsado del grupo */
+.group-collapsed .group-content {
+  max-height: 0;
+  padding: 0;
+}
+
+/* Rotación del ícono cuando el grupo está colapsado */
+.group-header i.fa-chevron-down {
+  transition: transform 0.3s ease;
+}
+
+.group-collapsed .group-header i.fa-chevron-down {
+  transform: rotate(-90deg);
+}
+
+/* Sección de etiquetas dentro de la barra lateral */
+.tags-section {
+  flex: 1;
+  overflow-y: auto;
+}
+
+/* Contenedor de etiquetas utilizando grid para organizar las etiquetas */
+.tags-container {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+}
+
+/* Estilos de cada etiqueta */
+.tag {
+  background: #e6b17e;
+  padding: 4px 8px; /* Reducir padding para hacer la etiqueta más estrecha */
+  border-radius: 4px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.85rem; /* Tamaño de fuente ajustado */
+  color: #2c1810;
+  cursor: move;
+  -webkit-user-select: none;
+  user-select: none;
+  transition: all 0.2s;
+}
+
+/* Texto de la etiqueta alineado a la izquierda */
+.tag span {
+  flex-grow: 1;
+  text-align: left;
+}
+
+/* Iconos alineados a la derecha */
+.tag .icon-container {
+  display: flex;
+  gap: 4px; /* Espaciado entre los iconos */
+  align-items: center;
+}
+
+/* Estilos al pasar el cursor sobre una etiqueta */
+.tag:hover {
+  background: #b87c6d;
+  color: white;
+}
+
+/* Estado de arrastre de una etiqueta */
+.tag.dragging {
+  opacity: 0.5;
+  transform: scale(0.95);
+}
+
+/* Botón de eliminación dentro de una etiqueta */
+.tag .delete-btn {
+  opacity: 0;
+  color: currentColor;
+  transition: opacity 0.2s;
+}
+
+.tag:hover .delete-btn {
+  opacity: 0.8;
+}
+
+.tag .delete-btn:hover {
+  opacity: 1;
+}
+
+/* Contenido principal de la aplicación */
+.main-content {
+  background: white;
+  padding: 1rem;
+  border-radius: var(--border-radius);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
+  max-height: 100%;
+  overflow: hidden;
+}
+
+/* Cabecera dentro del contenido principal */
+.header {
+  background: var(--primary);
+  padding: 0.5rem;
+  border-radius: var(--border-radius) var(--border-radius) 0 0;
+  color: white;
+  margin: -1rem -1rem 1rem -1rem;
+}
+
+/* Estilos de los campos de entrada dentro de la cabecera */
+.header input {
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.2);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 3px;
+  margin-left: 8px;
+}
+
+/* Placeholder de los campos de entrada en la cabecera */
+.header input::placeholder {
+  color: rgba(255,255,255,0.6);
+}
+
+/* Contenedor de la tabla principal con scroll vertical */
+.table-container {
+  flex: 1;
+  overflow-y: auto;
+  margin: 0 -1rem;
+  padding: 0 1rem;
+  padding-right: 24px;
+}
+
+/* Estilos de la tabla principal */
+.main-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+}
+
+/* Estilos de las celdas de la tabla */
+.main-table th,
+.main-table td {
+  padding: 4px 6px;
+  border: 1px solid #ddd;
+  font-size: 0.85rem;
+}
+
+/* Estilos de los encabezados de la tabla */
+.main-table th {
+  background: var(--secondary);
+  color: white;
+  text-align: left;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+/* Filas pares con fondo alternativo */
+.main-table tbody tr:nth-child(even) {
+  background: #f9f9f9;
+}
+
+/* Cambio de fondo al pasar el cursor sobre una fila */
+.main-table tbody tr:hover {
+  background: #fff5e6;
+}
+
+/* Estilos de los campos de entrada y select dentro de la tabla */
+.main-table input,
+.main-table select {
+  width: 100%;
+  padding: 4px;
+  border: 1px solid #ddd;
+  border-radius: 3px;
+  box-sizing: border-box;
+  font-size: 0.85rem;
+}
+
+/* Estilos específicos para campos numéricos */
+.main-table input[type="number"] {
+  padding: 4px 2px;
+  min-width: 40px;
+  text-align: right;
+}
+
+/* Clase para inputs de letra con estilos específicos */
+.letter-input {
+  padding: 4px 2px !important;
+  min-width: 40px;
+  -webkit-appearance: textfield;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+/* Estilos de los controles dentro de la tabla */
+.controls {
+  margin: 0.25rem 0;
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* Estilos de los botones */
+.btn {
+  padding: 4px 8px;
+  background: var(--accent);
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Estilos al pasar el cursor sobre un botón */
+.btn:hover {
+  background: var(--secondary);
+  color: white;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Estilos de los íconos dentro de los botones */
+.btn i {
+  font-size: 1.1em;
+}
+
+/* Celda para el peso total con estilos destacados */
+.weight-cell {
+  font-weight: bold;
+  background: var(--accent) !important;
+  text-align: right;
+}
+
+/* Estilos de la zona de soltar (dropzone) para drag & drop */
+.dropzone {
+  position: relative !important;
+  padding-right: 65px !important;
+}
+
+/* Estado activo de la dropzone */
+.dropzone.active {
+  background: #fff5e6;
+}
+
+/* Indicador visual al activar la dropzone */
+.dropzone.active::after {
+  content: 'Soltar aquí';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0,0,0,0.5);
+  color: white;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 0.8rem;
+}
+
+/* Estilos de los inputs de parte */
+.part-input {
+  width: calc(100% - 60px) !important;
+  margin-right: 60px;
+  border: none !important;
+  background: transparent;
+  cursor: text;
+  font-size: 0.85rem;
+}
+
+/* Estilos al enfocar el input de parte */
+.part-input:focus {
+  outline: none;
+  background: #fff5e6;
+}
+
+/* Clase para contenido modal amplio */
+.modal-content-wide {
+  min-width: 600px;
+}
+
+/* Clase para el contenedor del spinner */
+.spinner-container {
+  display: none;
+}
+
+/* Diseño de cuadrícula para formularios */
+.grid-layout {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+/* Popup para configurar los pesos */
+.weights-popup {
+  position: relative;
+  display: inline-block;
+}
+
+/* Contenido del popup de pesos */
+.weights-content {
+  display: none;
+  position: absolute;
+  right: 0;
+  top: 100%;
+  background: white;
+  padding: 1rem;
+  border-radius: var(--border-radius);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  z-index: 100;
+  min-width: 200px;
+}
+
+/* Mostrar el contenido del popup al pasar el cursor */
+.weights-popup:hover .weights-content {
+  display: block;
+}
+
+/* Configuración de pesos con grid layout */
+.weight-config {
+  display: grid;
+  grid-template-columns: auto 60px;
+  gap: 6px;
+  align-items: center;
+  margin: 4px 0;
+  font-size: 0.85rem;
+}
+
+/* Fila de totales fijada en la parte inferior de la tabla */
+.totals-row {
+  position: sticky;
+  bottom: 0;
+  background: white !important;
+  box-shadow: 0 -2px 4px rgba(0,0,0,0.1);
+  font-weight: bold;
+}
+
+/* Previsualización del color seleccionado */
+.color-preview {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 4px;
+  vertical-align: middle;
+  border: 1px solid #ddd;
+}
+
+.move-btn {
+  padding: 2px 4px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--primary);
+  transition: color 0.2s;
+}
+
+.move-btn:hover {
+  color: var(--secondary);
+}
+
+.row-actions {
+  display: flex;
+  gap: 2px;
+}
+
+/* Anchos específicos para las columnas de la tabla */
+.main-table th:nth-child(1),
+.main-table td:nth-child(1) {
+  width: 25%;
+}
+
+.main-table th:nth-child(2),
+.main-table td:nth-child(2) {
+  width: 20%;
+}
+
+.main-table th:nth-child(3),
+.main-table td:nth-child(3) {
+  width: 15%;
+}
+
+.main-table th:nth-child(4),
+.main-table td:nth-child(4) {
+  width: 60px; 
+}
+
+.main-table th:nth-child(n+5):nth-child(-n+12),
+.main-table td:nth-child(n+5):nth-child(-n+12) {
+  width: 50px;
+}
+
+.main-table th:last-child,
+.main-table td:last-child {
+  width: 100px;
+}
+
+/* Acciones disponibles en cada fila */
+.row-actions {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.2s;
+  z-index: 10;
+}
+
+.main-table tr:hover .row-actions {
+  opacity: 1;
+}
+
+.delete-row-btn {
+  padding: 2px 4px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.8rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ff4444;
+  transition: color 0.2s;
+}
+
+/* Cambio de color al pasar el cursor sobre el botón de eliminar */
+.delete-row-btn {
+  color: #ff4444;
+}
+
+.delete-row-btn:hover {
+  color: #cc0000;
+}
+/* Estilos para tooltips */
+[data-tooltip] {
+  position: relative;
+}
+
+/* Contenido del tooltip */
+[data-tooltip]:before {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px 8px;
+  background: rgba(0,0,0,0.8);
+  color: white;
+  font-size: 0.8rem;
+  border-radius: 3px;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.2s;
+}
+
+/* Mostrar el tooltip al pasar el cursor */
+[data-tooltip]:hover:before {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Estilos personalizados para las barras de desplazamiento */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4
+
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--secondary);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--primary);
+}
+
+/* Animación de aparición */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Reaplicación de la animación a etiquetas y filas de la tabla */
+.main-table tbody tr {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* Estilos para la clase 'barreja' */
+.barreja {
+  color: var(--primary);
+  font-style: italic;
+  background: transparent !important;
+  cursor: default !important;
+}
+
+/* Estilos para el botón adyacente a 'barreja' */
+.barreja + .btn {
+  padding: 2px 4px;
+  font-size: 0.7rem;
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+/* Estilos para impresión */
+@media print {
+  button { display: none; }
+  input { border: none; }
+}
+
+/* Estilos para el modal */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+/* Contenido del modal */
+.modal-content {
+  background: white;
+  padding: 2rem;
+  border-radius: var(--border-radius);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  min-width: 300px;
+}
+
+/* Controles dentro del modal */
+.modal .controls {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+  margin-top: 1rem;
+}
+
+/* Spinner Styles */
+
+/* Estilos del Spinner */
+.spinner-hidden {
+  display: none;
+}
+
+#spinner .spinner-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+.spinner {
+  border: 8px solid #f3f3f3;
+  border-top: 8px solid var(--primary);
+  border-radius: 50%;
+  width: 60px;
+  height: 60px;
+  animation: spin 1s linear infinite;
+}
+
+#spinner .spinner {
+  border: 8px solid #f3f3f3;
+  border-top: 8px solid var(--primary);
+  border-radius: 50%;
+  width: 60px;
+  height: 60px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Notificación Styles */
+.notification {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background-color: var(--accent);
+  color: white;
+  padding: 10px 20px;
+  border-radius: var(--border-radius);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  z-index: 1001;
+  opacity: 0;
+  transition: opacity 0.5s;
+}
+
+.notification.show {
+  opacity: 1;
+}
+
+.total-cell {
+  text-align: right;
+}
+duplicate-barreja-btn {
+      padding: 2px 4px;
+      font-size: 0.7rem;
+      position: absolute;
+      right: 24px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: var(--primary);
+      cursor: pointer;
+    }
+    
+    .duplicate-barreja-btn:hover {
+  color: var(--secondary);
+}
+.mezclas-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+  .mezclas-table th,
+  .mezclas-table td {
+    padding: 8px;
+    border: 1px solid #ddd;
+  }
+
+  .mezclas-table th {
+    background: #b87c6d;
+    color: white;
+    text-align: left;
+  }
+
+  .mezclas-table th:nth-child(1) { width: 20%; }
+  .mezclas-table th:nth-child(2) { width: 60%; }
+  .mezclas-table th:nth-child(3) { width: 20%; }
+
+  .mezcla-componente {
+    display: inline-flex;
+    align-items: center;
+    background: #f5f5f5;
+    padding: 4px 8px;
+    border-radius: 4px;
+    margin: 2px 4px;
+    white-space: nowrap;
+  }
+
+  .mezcla-componente .color-preview {
+    margin-right: 6px;
+  }
+
+  .mezcla-componente .peso {
+    margin-left: 6px;
+    font-weight: bold;
+  }
+  
+  .app-logo {
+  height: 40px;
+  margin-right: 15px;
+  background: white;
+  padding: 5px;
+  border-radius: 4px;
+}
+
+.header-with-logo {
+  display: flex;
+  align-items: center;
+  margin-bottom: 15px;
+}
+/* Añadir al bloque de estilos */
+.confirm-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.confirm-content {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  min-width: 300px;
+  max-width: 400px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+}
+
+.confirm-content p {
+  margin: 0 0 20px 0;
+  font-size: 16px;
+  color: #333;
+}
+
+.confirm-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.confirm-btn {
+  background: #b87c6d;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.confirm-btn:hover {
+  background: #7c4c3e;
+}
+
+.cancel-btn {
+  background: #6c757d;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+/* Primero añadir estos estilos en la sección CSS */
+.modal-content {
+  max-height: 80vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.figuras-container {
+  overflow-y: auto;
+  max-height: 30vh;
+  margin: 1rem 0;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 0.5rem;
+}
+
+.totales-container {
+  overflow-y: auto;
+  max-height: 40vh;
+}
+
+.modal-controls {
+  position: sticky;
+  bottom: 0;
+  background: white;
+  padding: 1rem 0 0 0;
+  margin-top: auto;
+  border-top: 1px solid #ddd;
+}
+
+.cancel-btn:hover {
+  background: #5a6268;
+}
+
+/* Estilos específicos para diálogos de Google Apps Script */
+.script-app-dialog {
+  font-size: 0 !important; /* Oculta todo el texto inicialmente */
+}
+
+.script-app-dialog .modal-dialog-content {
+  font-size: 14px !important; /* Restaura el tamaño del texto para el contenido */
+}
+
+.script-app-dialog .modal-dialog-title,
+.script-app-dialog > div:first-child,
+.script-app-dialog div[role="heading"] {
+  display: none !important;
+  visibility: hidden !important;
+  height: 0 !important;
+  overflow: hidden !important;
+}
+
+/* Asegurar que solo se muestra el mensaje y los botones */
+.script-app-dialog .modal-dialog-content > :not(:last-child):not(.modal-dialog-buttons) {
+  display: none !important;
+}
+
+.script-app-dialog .modal-dialog-buttons {
+  font-size: 14px !important;
+}
+
+/* Ajustes adicionales para el diálogo */
+.modal-dialog {
+  padding-top: 0 !important;
+}
+
+.modal-dialog-content {
+  padding: 16px !important;
+}
+
+/* Ocultar elementos específicos que contengan el texto de la URL */
+div[class*="modal-dialog"] > div:first-child:not(.modal-dialog-buttons):not(.modal-dialog-content) {
+  display: none !important;
+}
+
+div[role="alertdialog"] > div:first-child:not(.modal-dialog-buttons):not(.modal-dialog-content) {
+  display: none !important;
+}
+
+    </style>
+    <!-- Inclusión de la librería de iconos Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+<!-- Spinner -->
+<div id="spinner" class="spinner-hidden">
+  <div class="spinner-overlay">
+    <div class="spinner"></div>
+  </div>
+</div>
+  
+  
+<!-- Notificación -->
+<div id="notification" class="notification" aria-live="polite" role="alert"></div>
+
+<div class="container">
+  <div class="sidebar">
+    <div class="tags-section">
+      <div class="groups-header">
+        <h3><i class="fas fa-tags"></i> Grupos de Partes</h3>
+        <button class="btn" onclick="addNewGroup()" title="Añadir nuevo grupo">
+          <i class="fas fa-folder-plus"></i>
+        </button>
+      </div>
+      <div class="groups-container" id="groupsContainer">
+        <!-- Ejemplo de grupo -->
+        <div class="group-section">
+          <div class="group-header">
+            <span>Grupo de Ejemplo</span>
+            <div class="group-controls">
+              <button class="btn" onclick="addTagToGroup('Grupo de Ejemplo')" title="Añadir etiqueta">
+                <i class="fas fa-plus"></i>
+              </button>
+              <button class="btn delete-group-btn" onclick="deleteGroup('Grupo de Ejemplo')" title="Eliminar grupo">
+                <i class="fas fa-trash"></i>
+              </button>
+            </div>
+          </div>
+          <div class="group-content">
+            <div class="tags-container">
+              <!-- Ejemplo de etiquetas -->
+              <div class="tag">
+                <span>Etiqueta 1</span>
+                <div class="icon-container">
+                  <i class="fas fa-plus" title="Añadir"></i>
+                  <i class="fas fa-trash delete-btn" title="Eliminar"></i>
+                </div>
+              </div>
+              <div class="tag">
+                <span>Etiqueta 2</span>
+                <div class="icon-container">
+                  <i class="fas fa-plus" title="Añadir"></i>
+                  <i class="fas fa-trash delete-btn" title="Eliminar"></i>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="main-content">
+    <div class="header">
+      <h2><i class="fas fa-puzzle-piece"></i> Figura: <input type="text" placeholder="Nombre de la figura"></h2>
+    </div>
+    
+    <div class="controls">
+      <button class="btn" onclick="addRow()">
+        <i class="fas fa-plus"></i> Añadir Parte
+      </button>
+      <button class="btn" onclick="addBarreja()">
+        <i class="fas fa-mortar-pestle"></i> Añadir Mezcla
+      </button>
+      <button class="btn" onclick="mostrarTalleres()" data-tooltip="Calcular sobres y mezclas">
+        <i class="fas fa-calculator"></i> Calcular Talleres
+      </button>
+      <button class="btn" onclick="mostrarCalculadoraMultiple()" data-tooltip="Calcular material para múltiples figuras">
+        <i class="fas fa-calculator"></i> Calcular Múltiples Figuras
+      </button>
+      <button class="btn" onclick="abrirProcesadorImagenes()" data-tooltip="Convertir imagen a tabla">
+        <i class="fas fa-table"></i> Convertir Tabla
+      </button>
+      <div class="weights-popup">
+        <button class="btn" data-tooltip="Configurar pesos">
+          <i class="fas fa-weight-hanging"></i> Pesos por letra
+        </button>
+        <div class="weights-content" id="weightConfigs">
+          <!-- Weight configs will be added here -->
+        </div>
+      </div>
+      <button class="btn" onclick="exportToExcel()" data-tooltip="Exportar a Excel">
+        <i class="fas fa-file-excel"></i> Exportar a Excel
+      </button>
+      <button class="btn" onclick="saveFigure()" data-tooltip="Guardar figura">
+        <i class="fas fa-save"></i> Guardar Figura
+      </button>
+      <button class="btn" onclick="loadFigure()" data-tooltip="Cargar figura">
+        <i class="fas fa-folder-open"></i> Cargar Figura
+      </button>
+
+      <button class="btn" onclick="generarFicha()" data-tooltip="Generar ficha">
+        <i class="fas fa-file-alt"></i> Generar Ficha
+      </button>
+    </div>
+    <div class="table-container">
+      <table class="main-table">
+        <thead>
+          <tr>
+            <th>Parte</th>
+            <th>Detalles</th>
+            <th>Color</th>
+            <th>Uds.</th>
+            <th>A</th>
+            <th>B</th>           
+            <th>C</th>
+            <th>D</th>
+            <th>E</th>
+            <th>F</th>
+            <th>G</th>
+            <th>H</th>
+            <th>Peso Total (gr)</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody">
+          <!-- Las filas se añadirán dinámicamente -->
+        </tbody>
+        <tfoot>
+          <tr class="totals-row">
+            <td colspan="12" class="text-right">Peso Total:</td>
+            <td class="weight-cell" id="totalWeight">0.00 gr</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+</div>
+
+
+<script>
+
+// Variables globales
+let currentBarejaNumber = 1;
+let barejaNumbers = new Set();
+let tagGroups = {};
+let pesosLetras = {};
+
+const colores = {
+  'blanco': '#ffffff',
+  'amarillo': '#ffdd00',
+  'naranja': '#ff9933',
+  'rojo': '#ff4444',
+  'azul': '#4444ff',
+  'verde': '#44ff44',
+  'morado': '#993399',
+  'negro': '#444444',
+  'albaricoque': '#fbceb1'
+};
+
+function getNextBarejaNumber() {
+  let number = 1;
+  while (barejaNumbers.has(number)) {
+    number++;
+  }
+  return number;
+}
+
+function updateBarejaNumbers() {
+  barejaNumbers.clear();
+  const rows = document.querySelectorAll('#tableBody tr');
+  const usedNumbers = new Set();
+  
+  // Primero recolectar todos los números usados
+  rows.forEach(row => {
+    const partInput = row.querySelector('.part-input');
+    if (partInput && partInput.value.startsWith('Barreja ')) {
+      const number = parseInt(partInput.value.split(' ')[1]);
+      if (!isNaN(number)) {
+        usedNumbers.add(number);
+      }
+    }
+  });
+
+  // Luego actualizar los números secuencialmente
+  let nextNumber = 1;
+  const numberMapping = new Map();
+
+  Array.from(usedNumbers).sort((a, b) => a - b).forEach(oldNumber => {
+    numberMapping.set(oldNumber, nextNumber++);
+  });
+
+  rows.forEach(row => {
+    const partInput = row.querySelector('.part-input');
+    if (partInput && partInput.value.startsWith('Barreja ')) {
+      const oldNumber = parseInt(partInput.value.split(' ')[1]);
+      const newNumber = numberMapping.get(oldNumber);
+      partInput.value = `Barreja ${newNumber}`;
+      barejaNumbers.add(newNumber);
+    }
+  });
+
+  currentBarejaNumber = Math.max(...barejaNumbers, 0) + 1;
+}
+
+async function duplicateBarreja(row) {
+  // Crear una copia profunda de la fila
+  const newRow = row.cloneNode(true);
+  const barejaNumber = row.querySelector('.part-input').value.split(' ')[1];
+  
+  // Configurar el nombre de la barreja
+  newRow.querySelector('.part-input').value = `Barreja ${barejaNumber}`;
+  
+  // Obtener el color original y el nuevo select
+  const originalSelect = row.querySelector('select');
+  const newSelectWrapper = newRow.querySelector('select').parentElement;
+  const originalColor = originalSelect.value;
+  
+  // Recrear el select con sus estilos
+  newSelectWrapper.innerHTML = '';
+  const newSelect = document.createElement('select');
+  newSelect.style.paddingLeft = '24px';
+  
+  // Definir colores base
+  const coloresBase = {
+    'blanco': '#ffffff',
+    'amarillo': '#ffdd00',
+    'naranja': '#ff9933',
+    'rojo': '#ff4444',
+    'azul': '#4444ff',
+    'verde': '#44ff44',
+    'morado': '#993399',
+    'negro': '#444444',
+    'albaricoque': '#fbceb1'
+  };
+
+  // Añadir las opciones de colores
+  Object.entries(coloresBase).forEach(([nombre, codigo]) => {
+    const option = document.createElement('option');
+    option.value = nombre;
+    option.textContent = nombre.charAt(0).toUpperCase() + nombre.slice(1);
+    option.style.backgroundColor = codigo;
+    option.style.color = ['blanco', 'amarillo'].includes(nombre) ? '#000' : '#fff';
+    newSelect.appendChild(option);
+  });
+  
+  // Establecer el color seleccionado
+  newSelect.value = originalColor;
+  
+  // Crear y configurar el preview del color
+  const preview = document.createElement('div');
+  preview.className = 'color-preview';
+  preview.style.position = 'absolute';
+  preview.style.left = '4px';
+  preview.style.top = '50%';
+  preview.style.transform = 'translateY(-50%)';
+  preview.style.backgroundColor = coloresBase[originalColor] || '#ffffff';
+  
+  // Añadir event listener para actualizar el preview
+  newSelect.addEventListener('change', () => {
+    preview.style.backgroundColor = coloresBase[newSelect.value] || '#ffffff';
+  });
+  
+  // Añadir elementos al wrapper
+  newSelectWrapper.appendChild(preview);
+  newSelectWrapper.appendChild(newSelect);
+  
+  // Configurar los inputs de letras y sus eventos
+  newRow.querySelectorAll('.letter-input').forEach(input => {
+    const letter = input.dataset.letter;
+    const originalValue = row.querySelector(`[data-letter="${letter}"]`).value;
+    input.value = originalValue;
+    input.addEventListener('input', () => calculateRowWeight(newRow));
+  });
+  
+  // Configurar el input de unidades y su evento
+  const unitsInput = newRow.querySelector('input[type="number"]');
+  unitsInput.addEventListener('input', () => calculateRowWeight(newRow));
+  
+  // Configurar los botones de acción
+  const actions = newRow.querySelector('.row-actions');
+  actions.innerHTML = '';
+  
+  // Agregar botón de duplicar
+  const duplicateBtn = document.createElement('button');
+  duplicateBtn.className = 'duplicate-barreja-btn';
+  duplicateBtn.innerHTML = '<i class="fas fa-arrow-down"></i>';
+  duplicateBtn.title = 'Duplicar esta mezcla';
+  duplicateBtn.onclick = async (e) => {
+    e.stopPropagation();
+    const confirmed = await Dialog.confirm('¿Deseas duplicar esta mezcla?');
+    if (confirmed) {
+      duplicateBarreja(newRow);
+    }
+  };
+  actions.appendChild(duplicateBtn);
+
+  // Agregar botón de eliminar
+  const deleteBtn = document.createElement('button');
+  deleteBtn.className = 'delete-row-btn';
+  deleteBtn.innerHTML = '<i class="fas fa-trash"></i>';
+  deleteBtn.title = 'Eliminar fila';
+  deleteBtn.onclick = async (e) => {
+    e.stopPropagation();
+    try {
+      const confirmed = await Dialog.confirm('¿Seguro que quieres eliminar esta fila?');
+      if (confirmed) {
+        newRow.remove();
+        updateBarejaNumbers();
+        calculateTotals();
+      }
+    } catch (error) {
+      console.error('Error al eliminar fila:', error);
+      showNotification('Error al eliminar la fila');
+    }
+  };
+  actions.appendChild(deleteBtn);
+  
+  // Insertar después de la última barreja del mismo número
+  let lastSameBareja = row;
+  let nextRow = row.nextElementSibling;
+  while (nextRow) {
+    const nextPartInput = nextRow.querySelector('.part-input');
+    if (nextPartInput && nextPartInput.value === `Barreja ${barejaNumber}`) {
+      lastSameBareja = nextRow;
+    }
+    nextRow = nextRow.nextElementSibling;
+  }
+  
+  lastSameBareja.after(newRow);
+  
+  // Calcular el peso de la nueva fila
+  calculateRowWeight(newRow);
+}
+
+function setupBarejaRow(row) {
+  // Make part input readonly and add barreja class
+  const partInput = row.querySelector('.part-input');
+  if (partInput) {
+    partInput.readOnly = true;
+    partInput.classList.add('barreja');
+  }
+
+  // Set up color select for barreja
+  const colorSelect = row.querySelector('select');
+  if (colorSelect) {
+    // Remove barreja options from color select for barreja rows
+    Array.from(colorSelect.options).forEach(option => {
+      if (option.value.startsWith('Barreja')) {
+        option.remove();
+      }
+    });
+  }
+
+  // Set up duplicate button
+  const actions = row.querySelector('.row-actions');
+  if (actions) {
+    // Crear el botón de duplicar
+    const duplicateBtn = document.createElement('button');
+    duplicateBtn.className = 'duplicate-barreja-btn';
+    duplicateBtn.innerHTML = '<i class="fas fa-arrow-down"></i>';
+    duplicateBtn.title = 'Duplicar esta mezcla';
+    duplicateBtn.onclick = (e) => {
+      e.stopPropagation();
+      duplicateBarreja(row);
+    };
+    
+    // Crear el botón de eliminar
+    const deleteBtn = document.createElement('button');
+    deleteBtn.className = 'delete-row-btn';
+    deleteBtn.innerHTML = '<i class="fas fa-trash"></i>';
+    deleteBtn.title = 'Eliminar fila';
+    deleteBtn.onclick = async (e) => {
+      e.stopPropagation();
+      try {
+        const confirmed = await Dialog.confirm('¿Seguro que quieres eliminar esta fila?');
+        if (confirmed) {
+          row.remove();
+          updateBarejaNumbers();
+          calculateTotals();
+        }
+      } catch (error) {
+        console.error('Error al eliminar fila:', error);
+        showNotification('Error al eliminar la fila');
+      }
+    };
+    
+    // Limpiar y añadir los botones en el orden correcto
+    actions.innerHTML = '';
+    actions.appendChild(duplicateBtn);
+    actions.appendChild(deleteBtn);
+  }
+
+  // Set up weight calculation
+  row.querySelectorAll('.letter-input').forEach(input => {
+    input.addEventListener('input', () => calculateRowWeight(row));
+  });
+
+  // Initialize weight calculation
+  calculateRowWeight(row);
+}
+
+function createTagElement(tagText, groupName) {
+  const tag = document.createElement('div');
+  tag.className = 'tag';
+  tag.draggable = true;
+  
+  const textSpan = document.createElement('span');
+  textSpan.textContent = tagText;
+  tag.appendChild(textSpan);
+  
+  const deleteBtn = document.createElement('span');
+  deleteBtn.innerHTML = '<i class="fas fa-times"></i>';
+  deleteBtn.className = 'delete-btn';
+  deleteBtn.onclick = (e) => {
+    e.stopPropagation();
+    if (confirm(`¿Eliminar la parte "${tagText}"?`)) {
+      tagGroups[groupName] = tagGroups[groupName].filter(t => t !== tagText);
+      updateTagsDisplay();
+      // Llamada al backend para eliminar la etiqueta
+      google.script.run.withSuccessHandler(() => {
+        console.log(`Parte "${tagText}" eliminada del grupo "${groupName}".`);
+      }).removeTag(groupName, tagText);
+    }
+  };
+  
+  tag.appendChild(deleteBtn);
+  
+  tag.addEventListener('dragstart', (e) => {
+    e.dataTransfer.setData('text/plain', tagText);
+    tag.classList.add('dragging');
+  });
+  
+  tag.addEventListener('dragend', () => {
+    tag.classList.remove('dragging');
+  });
+  
+  return tag;
+}
+
+function updateTagsDisplay() {
+  const container = document.getElementById('groupsContainer');
+  container.innerHTML = '';
+  
+  Object.entries(tagGroups).forEach(([groupName, groupTags]) => {
+    const groupSection = document.createElement('div');
+    groupSection.className = 'group-section';
+    
+    const groupHeader = document.createElement('div');
+    groupHeader.className = 'group-header';
+    groupHeader.innerHTML = `
+      <span>${groupName}</span>
+      <div class="group-controls">
+        <button class="btn" onclick="addTagToGroup('${groupName}')" title="Añadir parte">
+          <i class="fas fa-plus"></i>
+        </button>
+        <button class="btn delete-group-btn" onclick="deleteGroup('${groupName}')" title="Eliminar grupo">
+          <i class="fas fa-trash"></i>
+        </button>
+        <button class="btn">
+          <i class="fas fa-chevron-down"></i>
+        </button>
+      </div>
+    `;
+    
+    const groupContent = document.createElement('div');
+    groupContent.className = 'group-content';
+    
+    const tagsContainer = document.createElement('div');
+    tagsContainer.className = 'tags-container';
+    
+    // Ordenar las partes alfabéticamente
+    groupTags.sort().forEach(tag => {
+      tagsContainer.appendChild(createTagElement(tag, groupName));
+    });
+    
+    groupContent.appendChild(tagsContainer);
+    groupSection.appendChild(groupHeader);
+    groupSection.appendChild(groupContent);
+    
+    // Manejar el colapso del grupo
+    groupHeader.addEventListener('click', (e) => {
+      if (!e.target.closest('button') || e.target.closest('button').querySelector('.fa-chevron-down')) {
+        groupSection.classList.toggle('group-collapsed');
+      }
+    });
+    
+    container.appendChild(groupSection);
+  });
+}
+
+function addNewGroup() {
+  const groupName = prompt('Nombre del nuevo grupo:');
+  if (groupName && !tagGroups[groupName]) {
+    tagGroups[groupName] = [];
+    updateTagsDisplay();
+    // Llamada al backend para guardar el nuevo grupo
+    google.script.run.withSuccessHandler(() => {
+      console.log(`Grupo "${groupName}" añadido.`);
+    }).addGroup(groupName);
+  }
+}
+
+async function deleteGroup(groupName) {
+  const confirmed = await customConfirm(`¿Estás seguro de que quieres eliminar el grupo "${groupName}" y todas sus partes?`);
+  if (confirmed) {
+    google.script.run
+      .withSuccessHandler(() => {
+        delete tagGroups[groupName];
+        updateTagsDisplay();
+        showNotification(`Grupo "${groupName}" eliminado correctamente`);
+      })
+      .withFailureHandler((error) => {
+        showNotification('Error al eliminar grupo: ' + error);
+      })
+      .deleteGroup(groupName);
+  }
+}
+
+function addTagToGroup(groupName) {
+  const tagName = prompt(`Nueva parte para ${groupName}:`);
+  if (tagName && !tagGroups[groupName].includes(tagName)) {
+    tagGroups[groupName].push(tagName);
+    updateTagsDisplay();
+    // Llamada al backend para guardar la nueva etiqueta
+    google.script.run.withSuccessHandler(() => {
+      console.log(`Parte "${tagName}" añadida al grupo "${groupName}".`);
+    }).addTag(groupName, tagName);
+  }
+}
+
+function createColorSelect(isBareja = false) {
+  const select = document.createElement('select');
+  select.style.paddingLeft = '24px';
+  
+  // Definir colores base
+  const coloresBase = {
+    'blanco': '#ffffff',
+    'amarillo': '#ffdd00',
+    'naranja': '#ff9933',
+    'rojo': '#ff4444',
+    'azul': '#4444ff',
+    'verde': '#44ff44',
+    'morado': '#993399',
+    'negro': '#444444',
+    'albaricoque': '#fbceb1'
+  };
+
+  // Añadir opciones de Barreja (1 al 5)
+  const barejas = Array.from({length: 5}, (_, i) => `Barreja ${i + 1}`);
+  
+  // Primero añadir los colores normales
+  Object.entries(coloresBase).forEach(([nombre, codigo]) => {
+    const option = document.createElement('option');
+    option.value = nombre;
+    option.textContent = nombre.charAt(0).toUpperCase() + nombre.slice(1);
+    option.style.backgroundColor = codigo;
+    select.appendChild(option);
+  });
+  
+  // Añadir un separador
+  const separator = document.createElement('option');
+  separator.disabled = true;
+  separator.textContent = '──────────';
+  select.appendChild(separator);
+  
+  // Añadir las opciones de Barreja
+  barejas.forEach(barreja => {
+    const option = document.createElement('option');
+    option.value = barreja;
+    option.textContent = barreja;
+    option.classList.add('barreja-option');
+    select.appendChild(option);
+  });
+
+  const wrapper = document.createElement('div');
+  wrapper.style.position = 'relative';
+  
+  const preview = document.createElement('div');
+  preview.className = 'color-preview';
+  preview.style.position = 'absolute';
+  preview.style.left = '4px';
+  preview.style.top = '50%';
+  preview.style.transform = 'translateY(-50%)';
+  
+  select.addEventListener('change', () => {
+    if (select.value.startsWith('Barreja')) {
+      preview.style.backgroundColor = '#f5f5f5';
+      preview.style.backgroundImage = 'linear-gradient(45deg, #e0e0e0 25%, transparent 25%, transparent 75%, #e0e0e0 75%, #e0e0e0)';
+      preview.style.backgroundSize = '8px 8px';
+    } else {
+      preview.style.backgroundColor = coloresBase[select.value];
+      preview.style.backgroundImage = 'none';
+    }
+  });
+  
+  wrapper.appendChild(preview);
+  wrapper.appendChild(select);
+  
+  // Establecer color inicial
+  preview.style.backgroundColor = coloresBase[select.value];
+  
+  return wrapper;
+}
+
+function createRow(isBareja = false) {
+  const tr = document.createElement('tr');
+  
+  // Parte
+  const partCell = document.createElement('td');
+  partCell.className = 'dropzone';
+  
+  const partInput = document.createElement('input');
+  partInput.className = 'part-input';
+  partInput.type = 'text';
+  if (isBareja) {
+    const nextNumber = getNextBarejaNumber();
+    partInput.value = `Barreja ${nextNumber}`;
+    partInput.readOnly = true;
+    partInput.classList.add('barreja');
+    barejaNumbers.add(nextNumber);
+  } else {
+    partInput.placeholder = 'Escribe o arrastra una parte';
+  }
+  partCell.appendChild(partInput);
+
+  // Row actions
+  const actions = document.createElement('div');
+  actions.className = 'row-actions';
+
+  // Botón mover arriba
+  const moveUpBtn = document.createElement('button');
+  moveUpBtn.className = 'move-btn';
+  moveUpBtn.innerHTML = '<i class="fas fa-arrow-up"></i>';
+  moveUpBtn.title = 'Mover arriba';
+  moveUpBtn.onclick = (e) => {
+    e.stopPropagation();
+    const tbody = document.getElementById('tableBody');
+    const rows = Array.from(tbody.children);
+    const currentIndex = rows.indexOf(tr);
+    if (currentIndex > 0) {
+      tbody.insertBefore(tr, rows[currentIndex - 1]);
+      updateBarejaNumbers();
+      calculateTotals();
+    }
+  };
+  actions.appendChild(moveUpBtn);
+
+  // Botón mover abajo
+  const moveDownBtn = document.createElement('button');
+  moveDownBtn.className = 'move-btn';
+  moveDownBtn.innerHTML = '<i class="fas fa-arrow-down"></i>';
+  moveDownBtn.title = 'Mover abajo';
+  moveDownBtn.onclick = (e) => {
+    e.stopPropagation();
+    const tbody = document.getElementById('tableBody');
+    const rows = Array.from(tbody.children);
+    const currentIndex = rows.indexOf(tr);
+    if (currentIndex < rows.length - 1) {
+      tbody.insertBefore(tr, rows[currentIndex + 2]);
+      updateBarejaNumbers();
+      calculateTotals();
+    }
+  };
+  actions.appendChild(moveDownBtn);
+  
+  // Si es barreja, añadir botón de duplicar
+  if (isBareja) {
+    const duplicateBtn = document.createElement('button');
+    duplicateBtn.className = 'duplicate-barreja-btn';
+    duplicateBtn.innerHTML = '<i class="fas fa-arrow-down"></i>';
+    duplicateBtn.title = 'Duplicar esta mezcla';
+    duplicateBtn.onclick = async (e) => {
+      e.stopPropagation();
+      const confirmed = await Dialog.confirm('¿Deseas duplicar esta mezcla?');
+      if (confirmed) {
+        duplicateBarreja(tr);
+      }
+    };
+    actions.appendChild(duplicateBtn);
+  }
+
+  // Botón eliminar
+  const deleteBtn = document.createElement('button');
+  deleteBtn.className = 'delete-row-btn';
+  deleteBtn.innerHTML = '<i class="fas fa-trash"></i>';
+  deleteBtn.title = 'Eliminar fila';
+  deleteBtn.onclick = async (e) => {
+    e.stopPropagation();
+    try {
+      const confirmed = await Dialog.confirm('¿Seguro que quieres eliminar esta fila?');
+      if (confirmed) {
+        tr.remove();
+        if (isBareja) {
+          updateBarejaNumbers();
+        }
+        calculateTotals();
+      }
+    } catch (error) {
+      console.error('Error al eliminar fila:', error);
+      showNotification('Error al eliminar la fila');
+    }
+  };
+  actions.appendChild(deleteBtn);
+  partCell.appendChild(actions);
+
+  // Detalles
+  const detailsCell = document.createElement('td');
+  const detailsInput = document.createElement('input');
+  detailsInput.type = 'text';
+  detailsInput.className = 'details-input';
+  detailsInput.placeholder = 'Detalles de la parte';
+  detailsCell.appendChild(detailsInput);
+
+  // Color
+  const colorCell = document.createElement('td');
+  colorCell.appendChild(createColorSelect());
+
+  // Units
+  const unitsCell = document.createElement('td');
+  const unitsInput = document.createElement('input');
+  unitsInput.type = 'number';
+  unitsInput.min = '1';
+  unitsInput.value = '1';
+  unitsInput.addEventListener('input', () => calculateRowWeight(tr));
+  unitsCell.appendChild(unitsInput);
+
+  // Letter inputs
+  const letterCells = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'].map(letter => {
+    const td = document.createElement('td');
+    const input = document.createElement('input');
+    input.type = 'number';
+    input.min = '0';
+    input.step = '1';
+    input.className = 'letter-input';
+    input.dataset.letter = letter;
+    input.addEventListener('input', () => calculateRowWeight(tr));
+    td.appendChild(input);
+    return td;
+  });
+
+  // Weight
+  const weightCell = document.createElement('td');
+  weightCell.className = 'weight-cell';
+  weightCell.textContent = '0.00 gr';
+
+  // Añadir todas las celdas a la fila
+  tr.append(partCell, detailsCell, colorCell, unitsCell, ...letterCells, weightCell);
+
+  // Configurar eventos de drag & drop
+  partCell.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    partCell.classList.add('active');
+  });
+
+  partCell.addEventListener('dragleave', () => {
+    partCell.classList.remove('active');
+  });
+
+  partCell.addEventListener('drop', (e) => {
+    e.preventDefault();
+    partCell.classList.remove('active');
+    partInput.value = e.dataTransfer.getData('text/plain');
+    calculateRowWeight(tr);
+  });
+
+  return tr;
+}
+
+// Función para mover una fila arriba o abajo
+function moveRow(row, direction) {
+  const tbody = document.getElementById('tableBody');
+  const rows = Array.from(tbody.children);
+  const currentIndex = rows.indexOf(row);
+  
+  if (direction === 'up' && currentIndex > 0) {
+    tbody.insertBefore(row, rows[currentIndex - 1]);
+  } else if (direction === 'down' && currentIndex < rows.length - 1) {
+    tbody.insertBefore(row, rows[currentIndex + 2]);
+  }
+  
+  // Actualizar numeración de barejas si es necesario
+  updateBarejaNumbers();
+  calculateTotals();
+}
+
+// Agregar estilos CSS
+const style = document.createElement('style');
+style.textContent = `
+  .move-btn {
+    padding: 2px 4px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--primary);
+    transition: color 0.2s;
+  }
+
+  .move-btn:hover {
+    color: var(--secondary);
+  }
+
+  .row-actions {
+    gap: 2px;
+  }
+`;
+document.head.appendChild(style);
+
+function addRow() {
+  const tableBody = document.getElementById('tableBody');
+  tableBody.appendChild(createRow());
+}
+
+function addBarreja() {
+  const tableBody = document.getElementById('tableBody');
+  const row = createRow(true);
+  tableBody.appendChild(row);
+  calculateRowWeight(row);
+}
+
+function calculateRowWeight(row) {
+  const colorSelect = row.querySelector('select');
+  const isBarreja = colorSelect && colorSelect.value.startsWith('Barreja');
+  
+  let weight = 0;
+  const units = parseInt(row.querySelector('input[type="number"]').value) || 0;
+  
+  // Solo calcular el peso si NO es una parte que usa Barreja como color
+  if (!isBarreja || row.querySelector('.part-input').value.startsWith('Barreja')) {
+    row.querySelectorAll('.letter-input').forEach(input => {
+      const letter = input.dataset.letter;
+      const value = parseFloat(input.value) || 0;
+      weight += value * (pesosLetras[letter] || 0);
+    });
+    
+    weight *= units;
+  }
+  
+  // Si es una parte que usa Barreja como color, el peso será 0
+  row.querySelector('.weight-cell').textContent = weight.toFixed(2) + ' gr';
+  calculateTotals();
+}
+
+function calculateTotals() {
+  let totalWeight = 0;
+  document.querySelectorAll('#tableBody tr').forEach(row => {
+    const colorSelect = row.querySelector('select');
+    const isBarreja = colorSelect && colorSelect.value.startsWith('Barreja');
+    const partInput = row.querySelector('.part-input');
+    
+    // Solo sumar al total si:
+    // 1. Es una fila de Barreja (parte empieza con "Barreja")
+    // 2. O si es una parte normal que NO usa Barreja como color
+    if (partInput.value.startsWith('Barreja') || !isBarreja) {
+      totalWeight += parseFloat(row.querySelector('.weight-cell').textContent) || 0;
+    }
+  });
+  
+  document.getElementById('totalWeight').textContent = totalWeight.toFixed(2) + ' gr';
+}
+
+function createWeightConfigs() {
+  const container = document.getElementById('weightConfigs');
+  container.innerHTML = '';
+  
+  Object.entries(pesosLetras).forEach(([letter, weight]) => {
+    const div = document.createElement('div');
+    div.className = 'weight-config';
+    
+    const label = document.createElement('label');
+    label.textContent = `Letra ${letter}:`;
+    
+    const input = document.createElement('input');
+    input.type = 'number';
+    input.value = weight;
+    input.min = '0';
+    input.addEventListener('change', (e) => {
+      pesosLetras[letter] = parseFloat(e.target.value);
+      // Recalculate all rows when weight changes
+      document.querySelectorAll('#tableBody tr').forEach(row => {
+        calculateRowWeight(row);
+      });
+      // Enviar los nuevos pesos al backend
+      google.script.run.withSuccessHandler(() => {
+        console.log(`Peso de la letra ${letter} actualizado a ${pesosLetras[letter]}`);
+      }).updateLetterWeights(pesosLetras);
+    });
+    
+    div.appendChild(label);
+    div.appendChild(input);
+    container.appendChild(div);
+  });
+}
+
+function calculateTotals() {
+  let totalWeight = 0;
+  document.querySelectorAll('#tableBody tr').forEach(row => {
+    const colorSelect = row.querySelector('select');
+    const isBarreja = colorSelect && colorSelect.value.startsWith('Barreja');
+    const partInput = row.querySelector('.part-input');
+    
+    if (partInput.value.startsWith('Barreja') || !isBarreja) {
+      totalWeight += parseFloat(row.querySelector('.weight-cell').textContent) || 0;
+    }
+  });
+  
+  document.getElementById('totalWeight').textContent = totalWeight.toFixed(2) + ' gr';
+}
+
+function calculateTallerTotals(rows, mode = 'separate') {
+  const colorTotals = {};
+  const mezclas = new Map();
+  
+  rows.forEach(row => {
+    const partInput = row.querySelector('.part-input');
+    const color = row.querySelector('select').value;
+    const weight = parseFloat(row.querySelector('.weight-cell').textContent) || 0;
+    
+    if (partInput.value.startsWith('Barreja')) {
+      const barejaNum = partInput.value;
+      
+      if (!mezclas.has(barejaNum)) {
+        mezclas.set(barejaNum, {
+          name: barejaNum,
+          components: [],
+          totalWeight: 0
+        });
+      }
+      
+      const barreja = mezclas.get(barejaNum);
+      barreja.components.push({
+        color: color,
+        weight: weight
+      });
+      barreja.totalWeight += weight;
+
+      // En modo combined, sumamos los componentes al total por color
+      if (mode === 'combined') {
+        colorTotals[color] = (colorTotals[color] || 0) + weight;
+      }
+    } else if (!color.startsWith('Barreja')) {
+      // Sumar colores normales siempre
+      colorTotals[color] = (colorTotals[color] || 0) + weight;
+    }
+  });
+
+  return { colorTotals, mezclas };
+}
+
+function updateTalleresCalc() {
+  const rows = Array.from(document.querySelectorAll('#tableBody tr'));
+  const mode = document.getElementById('calculationMode').value;
+  const studentCount = parseInt(document.getElementById('studentCount').value) || 1;
+  const safetyMargin = parseFloat(document.getElementById('safetyMargin').value) || 0;
+  
+  const { colorTotals, mezclas } = calculateTallerTotals(rows, mode);
+  const resultsContainer = document.getElementById('calculationResults');
+
+  // Función para aplicar el margen de seguridad
+  const applyMargin = (weight) => {
+    const margin = 1 + (safetyMargin / 100);
+    return weight * margin;
+  };
+
+  // Multiplicar los totales por el número de alumnos y aplicar margen de seguridad
+  Object.keys(colorTotals).forEach(color => {
+    colorTotals[color] = applyMargin(colorTotals[color] * studentCount);
+  });
+
+  let html = `
+    <h3>Cantidades por Color${mode === 'combined' ? ' (incluye mezclas)' : ' (sin mezclas)'}</h3>
+    <p style="color: #666; font-size: 0.9em; margin-bottom: 1rem;">
+      * Cantidades incluyen un margen de seguridad del ${safetyMargin}%
+    </p>
+    <table class="main-table" style="margin-bottom: 1rem;">
+      <thead>
+        <tr>
+          <th>Color</th>
+          <th>Gramos Totales</th>
+          <th>Sobres (48gr)</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${Object.entries(colorTotals).map(([color, weight]) => `
+          <tr>
+            <td>
+              <div class="color-preview" style="background: ${colores[color]}"></div>
+              ${color}
+            </td>
+            <td class="weight-total" data-base-weight="${weight/studentCount}">${weight.toFixed(2)} gr</td>
+            <td class="sobres-count">${Math.ceil(weight / 48)}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  `;
+
+  if (mode === 'separate' && mezclas.size) {
+    html += `
+      <h3>Mezclas</h3>
+      <table class="main-table mezclas-table">
+        <thead>
+          <tr>
+            <th>Mezcla</th>
+            <th>Composición</th>
+            <th>Peso Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${Array.from(mezclas.values()).map(m => {
+            const totalMezcla = applyMargin(m.totalWeight * studentCount);
+            return `
+              <tr>
+                <td>${m.name}</td>
+                <td>
+                  ${m.components.map(comp => `
+                    <div class="mezcla-componente">
+                      <div class="color-preview" style="background: ${colores[comp.color]}"></div>
+                      ${comp.color}
+                      <span class="component-weight" data-base-weight="${comp.weight}">
+                        ${applyMargin(comp.weight * studentCount).toFixed(2)} gr
+                      </span>
+                    </div>
+                  `).join('')}
+                </td>
+                <td class="mezcla-weight" data-base-weight="${m.totalWeight}">
+                  ${totalMezcla.toFixed(2)} gr
+                </td>
+              </tr>
+            `;
+          }).join('')}
+        </tbody>
+      </table>
+    `;
+  }
+
+  resultsContainer.innerHTML = html;
+}
+
+function mostrarTalleres() {
+  const figureName = document.querySelector('.header input').value || 'Sin nombre';
+  
+  const modal = document.createElement('div');
+  modal.className = 'modal';
+  modal.innerHTML = `
+    <div class="modal-content" style="min-width: 600px;">
+      <h2>Cálculo de Talleres</h2>
+      
+      <div style="margin: 1rem 0">
+        <div style="display: grid; grid-template-columns: auto 1fr; gap: 0.5rem; align-items: center;">
+          <label>Nombre de la Escuela:</label>
+          <input type="text" id="schoolName">
+          
+          <label>Curso:</label>
+          <input type="text" id="courseName">
+          
+          <label>Número de Alumnos:</label>
+          <input type="number" id="studentCount" min="1" value="1" onchange="updateTalleresCalc()">
+          
+          <label>Margen de seguridad (%):</label>
+          <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <input type="number" 
+                   id="safetyMargin" 
+                   min="0" 
+                   max="100" 
+                   value="0" 
+                   onchange="updateTalleresCalc()"
+                   style="width: 80px;">
+            <span style="color: #666; font-size: 0.9em;">
+              (0-100%)
+            </span>
+          </div>
+          
+          <label>Modo de cálculo:</label>
+          <select id="calculationMode" onchange="updateTalleresCalc()">
+            <option value="separate">Mezclas Preparadas (separado)</option>
+            <option value="combined">Mezclas en Taller (sumado)</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="calculationResults">
+        <!-- Los resultados se actualizarán dinámicamente -->
+      </div>
+
+      <div class="controls" style="margin-top: 1rem;">
+        <button class="btn" onclick="printTalleres()">
+          <i class="fas fa-print"></i> Imprimir
+        </button>
+        <button class="btn" onclick="exportTalleresCSV()">
+          <i class="fas fa-file-csv"></i> Exportar CSV
+        </button>
+        <button class="btn" onclick="saveTalleresToSheet()">
+          <i class="fas fa-save"></i> Guardar en Sheet
+        </button>
+        <button class="btn" onclick="this.closest('.modal').remove()">
+          <i class="fas fa-times"></i> Cerrar
+        </button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+  updateTalleresCalc();
+}
+
+function saveTalleresToSheet() {
+  try {
+    const data = {
+      schoolName: document.getElementById('schoolName').value || '',
+      courseName: document.getElementById('courseName').value || '',
+      studentCount: document.getElementById('studentCount').value || '1',
+      safetyMargin: document.getElementById('safetyMargin').value || '0',
+      figureName: document.querySelector('.header input').value || 'Sin nombre',
+      calculationMode: document.getElementById('calculationMode').value
+    };
+
+    const rows = Array.from(document.querySelectorAll('#tableBody tr'));
+    const { colorTotals, mezclas } = calculateTallerTotals(rows, data.calculationMode);
+
+    // Aplicar multiplicador de estudiantes y margen de seguridad
+    const studentCount = parseInt(data.studentCount);
+    const safetyMargin = 1 + (parseFloat(data.safetyMargin) / 100);
+    
+    Object.keys(colorTotals).forEach(color => {
+      colorTotals[color] = colorTotals[color] * studentCount * safetyMargin;
+    });
+
+    data.colorTotals = colorTotals;
+    data.mezclas = Array.from(mezclas.values());
+
+    google.script.run
+      .withSuccessHandler(() => {
+        showNotification('Datos de taller guardados correctamente');
+        document.querySelector('.modal').remove();
+      })
+      .withFailureHandler((error) => {
+        showNotification('Error al guardar datos: ' + error);
+      })
+      .saveTalleres(data);
+
+  } catch (error) {
+    showNotification('Error: ' + error.message);
+  }
+}
+
+function printTalleres() {
+  window.print();
+}
+
+function exportTalleresCSV() {
+  const schoolName = document.getElementById('schoolName').value;
+  const courseName = document.getElementById('courseName').value;
+  const studentCount = document.getElementById('studentCount').value;
+  const calculationMode = document.getElementById('calculationMode').value;
+  
+  let csv = `Escuela,${schoolName}\nCurso,${courseName}\nAlumnos,${studentCount}\nModo,${calculationMode}\n\n`;
+  csv += 'Color,Gramos Totales,Sobres\n';
+  
+  document.querySelectorAll('.main-table tbody tr').forEach(row => {
+    const cells = row.querySelectorAll('td');
+    if (cells.length === 3) {
+      const color = cells[0].textContent.trim();
+      const weight = cells[1].textContent.trim();
+      const sobres = cells[2].textContent.trim();
+      csv += `"${color}",${weight},${sobres}\n`;
+    }
+  });
+
+  // Añadir mezclas si están en modo separado
+  if (calculationMode === 'separate') {
+    csv += '\nMezclas\nNombre,Composición,Peso Total\n';
+    document.querySelectorAll('.mezclas-table tbody tr').forEach(row => {
+      const name = row.querySelector('td:nth-child(1)').textContent.trim();
+      const components = Array.from(row.querySelectorAll('.mezcla-componente'))
+        .map(comp => `${comp.textContent.trim()}`).join('; ');
+      const total = row.querySelector('.mezcla-weight').textContent.trim();
+      csv += `"${name}","${components}","${total}"\n`;
+    });
+  }
+  
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.setAttribute('hidden', '');
+  a.setAttribute('href', url);
+  a.setAttribute('download', 'talleres.csv');
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+function exportToExcel() {
+  const rows = Array.from(document.querySelectorAll('#tableBody tr'));
+  let csv = 'Parte,Detalles,Color,Unidades,A,B,C,D,E,F,G,H,Peso Total\n';
+  
+  rows.forEach(row => {
+    const part = row.querySelector('.part-input').value;
+    const details = row.querySelector('input[type="text"]:not(.part-input)').value;
+    const color = row.querySelector('select').value;
+    const units = row.querySelector('input[type="number"]').value;
+    const letters = Array.from(row.querySelectorAll('.letter-input')).map(input => input.value);
+    const weight = row.querySelector('.weight-cell').textContent;
+    
+    csv += `"${part}","${details}","${color}",${units},${letters.join(',')},${weight}\n`;
+  });
+  
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.setAttribute('hidden', '');
+  a.setAttribute('href', url);
+  a.setAttribute('download', 'figura.csv');
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+  
+/**
+ * Guarda una figura
+ */
+ function saveFigure() {
+  try {
+    showSpinner();
+    const figureName = document.querySelector('.header input').value || 'Sin nombre';
+    const rows = document.querySelectorAll('#tableBody tr');
+    
+    if (rows.length === 0) {
+      hideSpinner();
+      showNotification('No hay datos para guardar');
+      return;
+    }
+
+    const data = {
+      name: figureName,
+      rows: []
+    };
+    
+    rows.forEach(row => {
+      const partInput = row.querySelector('.part-input');
+      const detailsInput = row.querySelector('input[type="text"]:not(.part-input)');
+      const colorSelect = row.querySelector('select');
+      const unitsInput = row.querySelector('input[type="number"]');
+      
+      if (!partInput || !detailsInput || !colorSelect || !unitsInput) {
+        throw new Error('Estructura de fila inválida');
+      }
+
+      const rowData = {
+        part: partInput.value || '',
+        details: detailsInput.value || '',
+        color: colorSelect.value || 'blanco',
+        units: unitsInput.value || '1',
+        letters: {}
+      };
+      
+      row.querySelectorAll('.letter-input').forEach(input => {
+        if (input.dataset.letter) {
+          const value = input.value ? parseFloat(input.value) : 0;
+          rowData.letters[input.dataset.letter] = value;
+        }
+      });
+      
+      data.rows.push(rowData);
+    });
+
+    // Verificar si ya existe una figura cargada
+    const currentFigureId = document.body.dataset.currentFigureId;
+    if (currentFigureId) {
+      // Mostrar diálogo de confirmación
+      Dialog.confirm('¿Deseas actualizar la figura existente o crear una nueva?', {
+        acceptText: 'Actualizar',
+        cancelText: 'Crear Nueva',
+        thirdButton: 'Cancelar'
+      }).then(result => {
+        if (result === 'cancel') {
+          hideSpinner();
+          return;
+        }
+        
+        const isUpdate = result === true;
+        google.script.run
+          .withSuccessHandler((figureId) => {
+            hideSpinner();
+            document.body.dataset.currentFigureId = figureId;
+            const message = isUpdate ? 
+              `Figura "${figureName}" actualizada correctamente` :
+              `Nueva figura "${figureName}" guardada correctamente (ID: ${figureId})`;
+            showNotification(message);
+          })
+          .withFailureHandler((error) => {
+            hideSpinner();
+            showNotification('Error al ' + (isUpdate ? 'actualizar' : 'guardar') + ': ' + error.message);
+          })
+          .saveFigure(data, isUpdate ? currentFigureId : null);
+      });
+    } else {
+      // Si no hay figura cargada, crear una nueva
+      google.script.run
+        .withSuccessHandler((figureId) => {
+          hideSpinner();
+          document.body.dataset.currentFigureId = figureId;
+          showNotification(`Figura "${figureName}" guardada correctamente (ID: ${figureId})`);
+        })
+        .withFailureHandler((error) => {
+          hideSpinner();
+          showNotification('Error al guardar: ' + error.message);
+        })
+        .saveFigure(data);
+    }
+  } catch (error) {
+    hideSpinner();
+    showNotification('Error: ' + error.message);
+  }
+}
+
+/**
+ * Carga una figura seleccionada
+ */
+ function verifyRowStructure(row) {
+  console.log('Verificando estructura de fila:', {
+    'part-input': !!row.querySelector('.part-input'),
+    'text-input': !!row.querySelector('input[type="text"]'),
+    'select': !!row.querySelector('select'),
+    'number-input': !!row.querySelector('input[type="number"]'),
+    'letter-inputs': row.querySelectorAll('.letter-input').length
+  });
+}
+// Función para cargar una figura
+function loadFigure() {
+  showSpinner();
+  
+  google.script.run
+    .withSuccessHandler(function(figures) {
+      hideSpinner();
+      
+      if (!figures || figures.length === 0) {
+        showNotification('No hay figuras disponibles para cargar');
+        return;
+      }
+
+      const modal = document.createElement('div');
+      modal.className = 'modal';
+      modal.innerHTML = `
+        <div class="modal-content">
+          <h3>Seleccionar Figura</h3>
+          <select id="figureSelect" style="width: 100%; margin: 1rem 0; padding: 0.5rem;">
+            ${figures.map(fig => `<option value="${fig.id}">${fig.name} (${fig.id})</option>`).join('')}
+          </select>
+          <div class="controls">
+            <button class="btn" onclick="loadSelectedFigure()">
+              <i class="fas fa-check"></i> Cargar
+            </button>
+            <button class="btn" onclick="this.closest('.modal').remove()">
+              <i class="fas fa-times"></i> Cancelar
+            </button>
+          </div>
+        </div>
+      `;
+      
+      document.body.appendChild(modal);
+    })
+    .withFailureHandler(function(error) {
+      hideSpinner();
+      showNotification('Error al cargar figuras: ' + error);
+    })
+    .getFigures();
+}
+
+// Función para cargar la figura seleccionada
+function loadSelectedFigure() {
+  const figureId = document.getElementById('figureSelect').value;
+  if (!figureId) {
+    showNotification('Por favor, seleccione una figura');
+    return;
+  }
+
+  showSpinner();
+  
+  google.script.run
+    .withSuccessHandler(function(data) {
+      try {
+        if (!data || !data.rows) {
+          throw new Error('Datos de figura inválidos');
+        }
+
+        // Guardar el ID de la figura actual
+        document.body.dataset.currentFigureId = data.id;
+        
+        // Limpiar tabla existente
+        document.getElementById('tableBody').innerHTML = '';
+        
+        // Establecer nombre de la figura
+        document.querySelector('.header input').value = data.name || '';
+
+        // Crear filas para cada parte de la figura
+        data.rows.forEach(function(rowData) {
+          const isBarreja = rowData.part.includes('Barreja');
+          const row = createRow(isBarreja);
+
+          // Establecer valores en la fila
+          const partInput = row.querySelector('.part-input');
+          if (partInput) partInput.value = rowData.part || '';
+
+          const detailsInput = row.querySelector('input[type="text"]:not(.part-input)');
+          if (detailsInput) detailsInput.value = rowData.details || '';
+
+          // Actualizar el color y su preview
+          const colorWrapper = row.querySelector('select').parentElement;
+          const colorSelect = colorWrapper.querySelector('select');
+          const colorPreview = colorWrapper.querySelector('.color-preview');
+          
+          if (colorSelect && colorPreview) {
+            colorSelect.value = rowData.color || 'blanco';
+            
+            // Actualizar el preview según si es barreja o color normal
+            if (rowData.color.startsWith('Barreja')) {
+              colorPreview.style.backgroundColor = '#f5f5f5';
+              colorPreview.style.backgroundImage = 'linear-gradient(45deg, #e0e0e0 25%, transparent 25%, transparent 75%, #e0e0e0 75%, #e0e0e0)';
+              colorPreview.style.backgroundSize = '8px 8px';
+            } else {
+              const colores = {
+                'blanco': '#ffffff',
+                'amarillo': '#ffdd00',
+                'naranja': '#ff9933',
+                'rojo': '#ff4444',
+                'azul': '#4444ff',
+                'verde': '#44ff44',
+                'morado': '#993399',
+                'negro': '#444444',
+                'albaricoque': '#fbceb1'
+              };
+              colorPreview.style.backgroundColor = colores[rowData.color] || '#ffffff';
+              colorPreview.style.backgroundImage = 'none';
+            }
+          }
+
+          const unitsInput = row.querySelector('input[type="number"]');
+          if (unitsInput) unitsInput.value = rowData.units || '1';
+
+          // Establecer valores de letras manteniendo los decimales
+          Object.entries(rowData.letters || {}).forEach(([letter, value]) => {
+            const letterInput = row.querySelector(`input[data-letter="${letter}"]`);
+            if (letterInput) {
+              letterInput.value = Number.isInteger(value) ? value : value.toFixed(1);
+            }
+          });
+
+          document.getElementById('tableBody').appendChild(row);
+          calculateRowWeight(row);
+        });
+
+        // Cerrar modal
+        const modal = document.querySelector('.modal');
+        if (modal) modal.remove();
+
+        showNotification('Figura cargada correctamente');
+      } catch (error) {
+        showNotification('Error al procesar la figura: ' + error.message);
+      } finally {
+        hideSpinner();
+      }
+    })
+    .withFailureHandler(function(error) {
+      hideSpinner();
+      showNotification('Error al cargar la figura: ' + error);
+    })
+    .getFigureById(figureId);
+}
+
+function generarFicha() {
+  try {
+    showSpinner();
+    const figureName = document.querySelector('.header input').value || 'Sin nombre';
+    const rows = Array.from(document.querySelectorAll('#tableBody tr')).map(row => {
+      return {
+        part: row.querySelector('.part-input').value,
+        details: row.querySelector('.details-input').value,
+        color: row.querySelector('select').value,
+        letters: {
+          'A': parseFloat(row.querySelector('[data-letter="A"]').value || 0).toFixed(1),
+          'B': parseFloat(row.querySelector('[data-letter="B"]').value || 0).toFixed(1),
+          'C': parseFloat(row.querySelector('[data-letter="C"]').value || 0).toFixed(1),
+          'D': parseFloat(row.querySelector('[data-letter="D"]').value || 0).toFixed(1),
+          'E': parseFloat(row.querySelector('[data-letter="E"]').value || 0).toFixed(1),
+          'F': parseFloat(row.querySelector('[data-letter="F"]').value || 0).toFixed(1),
+          'G': parseFloat(row.querySelector('[data-letter="G"]').value || 0).toFixed(1),
+          'H': parseFloat(row.querySelector('[data-letter="H"]').value || 0).toFixed(1)
+        }
+      };
+    });
+
+    const data = {
+      name: figureName,
+      rows: rows
+    };
+
+    google.script.run
+      .withSuccessHandler(function(html) {
+        hideSpinner();
+        // Creamos la ventana primero
+        const win = window.open('', 'Ficha de Figura', 
+          'width=1000,height=800,menubar=no,toolbar=no,location=no,status=no');
+        
+        // Esperamos a que la ventana esté lista
+        if (win) {
+          // Escribimos el contenido HTML completo
+          win.document.open();
+          win.document.write(html);
+          win.document.close();
+          
+          // Manejamos errores de carga
+          win.onerror = function(msg, url, lineNo, columnNo, error) {
+            console.error('Error en la ventana de la ficha:', msg, url, lineNo, columnNo, error);
+            return false;
+          };
+        } else {
+          showNotification('El navegador bloqueó la ventana emergente. Por favor, permite las ventanas emergentes para esta página.');
+        }
+      })
+      .withFailureHandler(function(error) {
+        hideSpinner();
+        showNotification('Error al generar ficha: ' + error);
+      })
+      .generarFichaFigura(data);
+  } catch (error) {
+    hideSpinner();
+    showNotification('Error: ' + error.message);
+  }
+}
+// Funciones para manejar el spinner
+function showSpinner() {
+  document.getElementById('spinner').classList.remove('spinner-hidden');
+}
+
+function hideSpinner() {
+  document.getElementById('spinner').classList.add('spinner-hidden');
+}
+
+function showNotification(message) {
+  const notification = document.getElementById('notification');
+  notification.textContent = message;
+  notification.classList.add('show');
+  setTimeout(() => {
+    notification.classList.remove('show');
+  }, 3000);
+}
+
+function updateMainHeader() {
+  const header = document.querySelector('.header');
+  header.innerHTML = `
+    <div class="header-with-logo">
+      <img src="https://eixoscreativa.com/wp-content/uploads/2020/09/Eixos-creativa.png.webp" 
+           alt="Eixos Creativa" 
+           class="app-logo"
+           onerror="this.src='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';">
+      <h2><i class="fas fa-puzzle-piece"></i> Figura: <input type="text" placeholder="Nombre de la figura"></h2>
+    </div>
+  `;
+}
+function customConfirm(message) {
+  return new Promise((resolve) => {
+    const modal = document.createElement('div');
+    modal.className = 'confirm-modal';
+    modal.innerHTML = `
+      <div class="confirm-content">
+        <p>${message}</p>
+        <div class="confirm-buttons">
+          <button class="btn confirm-btn">Aceptar</button>
+          <button class="btn cancel-btn">Cancelar</button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    const acceptBtn = modal.querySelector('.confirm-btn');
+    const cancelBtn = modal.querySelector('.cancel-btn');
+
+    acceptBtn.onclick = () => {
+      modal.remove();
+      resolve(true);
+    };
+
+    cancelBtn.onclick = () => {
+      modal.remove();
+      resolve(false);
+    };
+  });
+}
+// Sistema de diálogos personalizado
+const Dialog = {
+  confirm: function(message) {
+    return new Promise((resolve) => {
+      const modal = document.createElement('div');
+      modal.className = 'confirm-modal';
+      modal.innerHTML = `
+        <div class="confirm-content">
+          <p>${message}</p>
+          <div class="confirm-buttons">
+            <button class="btn confirm-btn">Aceptar</button>
+            <button class="btn cancel-btn">Cancelar</button>
+          </div>
+        </div>
+      `;
+
+      document.body.appendChild(modal);
+
+      modal.querySelector('.confirm-btn').onclick = () => {
+        modal.remove();
+        resolve(true);
+      };
+
+      modal.querySelector('.cancel-btn').onclick = () => {
+        modal.remove();
+        resolve(false);
+      };
+    });
+  },
+
+  prompt: function(message, defaultValue = '') {
+    return new Promise((resolve) => {
+      const modal = document.createElement('div');
+      modal.className = 'confirm-modal';
+      modal.innerHTML = `
+        <div class="confirm-content">
+          <p>${message}</p>
+          <input type="text" class="dialog-input" value="${defaultValue}" style="width: 100%; margin: 10px 0; padding: 5px;">
+          <div class="confirm-buttons">
+            <button class="btn confirm-btn">Aceptar</button>
+            <button class="btn cancel-btn">Cancelar</button>
+          </div>
+        </div>
+      `;
+
+      document.body.appendChild(modal);
+      const input = modal.querySelector('.dialog-input');
+      input.focus();
+      input.select();
+
+      modal.querySelector('.confirm-btn').onclick = () => {
+        const value = input.value.trim();
+        modal.remove();
+        resolve(value);
+      };
+
+      modal.querySelector('.cancel-btn').onclick = () => {
+        modal.remove();
+        resolve(null);
+      };
+
+      input.onkeyup = (e) => {
+        if (e.key === 'Enter') {
+          modal.querySelector('.confirm-btn').click();
+        }
+      };
+    });
+  },
+
+  alert: function(message) {
+    return new Promise((resolve) => {
+      const modal = document.createElement('div');
+      modal.className = 'confirm-modal';
+      modal.innerHTML = `
+        <div class="confirm-content">
+          <p>${message}</p>
+          <div class="confirm-buttons">
+            <button class="btn confirm-btn">Aceptar</button>
+          </div>
+        </div>
+      `;
+
+      document.body.appendChild(modal);
+
+      modal.querySelector('.confirm-btn').onclick = () => {
+        modal.remove();
+        resolve();
+      };
+    });
+  }
+};
+
+function mostrarCalculadoraMultiple() {
+  const modal = document.createElement('div');
+  modal.className = 'modal';
+  modal.innerHTML = `
+    <div class="modal-content" style="width: 90vw; max-width: 1200px;">
+      <h2 style="margin-bottom: 1rem;">Cálculo de Material para Múltiples Figuras</h2>
+      
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
+        <div style="display: flex; align-items: center;">
+          <label style="min-width: 140px;">Número de Alumnos:</label>
+          <input type="number" id="totalStudentCount" min="1" value="1" 
+                 style="width: 60px; height: 32px; border: 1px solid #ddd; border-radius: 4px; padding: 0 8px;" 
+                 onchange="recalcularTotalesMultiples()">
+        </div>
+        <div style="display: flex; align-items: center;">
+          <label style="min-width: 140px;">Margen de seguridad (%):</label>
+          <input type="number" id="totalSafetyMargin" min="0" max="100" value="0" 
+                 style="width: 60px; height: 32px; border: 1px solid #ddd; border-radius: 4px; padding: 0 8px;" 
+                 onchange="recalcularTotalesMultiples()">
+        </div>
+      </div>
+
+      <div style="width: 300px; margin-bottom: 1.5rem;">
+        <div class="search-box" style="position: relative; margin-bottom: 0.5rem;">
+          <i class="fas fa-search" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #666;"></i>
+          <input type="text" id="figureSearch" 
+                 placeholder="Buscar figuras..." 
+                 style="width: 300px; height: 36px; padding: 0 12px 0 32px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9rem;"
+                 onkeyup="filtrarFiguras(this.value)">
+        </div>
+        <select id="figureSelect" multiple 
+                style="width: 300px; height: 120px; border: 1px solid #ddd; border-radius: 4px; padding: 4px; font-size: 0.9rem; background: #f8f9fa;">
+        </select>
+      </div>
+
+      <div id="figurasSelecionadas" 
+           style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.5rem; margin: 1rem 0; min-height: 50px;">
+      </div>
+
+      <div id="totalContent">
+        <h3 style="margin-bottom: 1rem;">Material Total</h3>
+        <table class="main-table" style="width: 100%; border-collapse: collapse;">
+          <thead>
+            <tr>
+              <th style="padding: 8px 12px; background: var(--secondary); color: white; text-align: left;">Color</th>
+              <th style="padding: 8px 12px; background: var(--secondary); color: white; text-align: left;">Gramos Totales</th>
+              <th style="padding: 8px 12px; background: var(--secondary); color: white; text-align: left;">Sobres (48gr)</th>
+            </tr>
+          </thead>
+          <tbody id="totalesBody"></tbody>
+        </table>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #ddd;">
+        <button class="btn" onclick="imprimirCalculoMultiple()">
+          <i class="fas fa-print"></i> Imprimir
+        </button>
+        <button class="btn" onclick="exportarCalculoMultiple()">
+          <i class="fas fa-file-export"></i> Exportar
+        </button>
+        <button class="btn" onclick="this.closest('.modal').remove()">
+          <i class="fas fa-times"></i> Cerrar
+        </button>
+      </div>
+    </div>
+  `;
+
+  // Estilos adicionales
+  const style = document.createElement('style');
+  style.textContent = `
+    #figureSelect option {
+      padding: 6px 12px;
+      cursor: pointer;
+      border-radius: 3px;
+      margin: 2px 0;
+    }
+    #figureSelect option:hover {
+      background-color: #e9ecef;
+    }
+    #figureSelect option:checked {
+      background: linear-gradient(0deg, var(--primary) 0%, var(--secondary) 100%);
+      color: white;
+    }
+    .main-table td {
+      padding: 8px 12px;
+      border: 1px solid #ddd;
+    }
+    .main-table tbody tr:nth-child(even) {
+      background-color: #f8f9fa;
+    }
+    .color-preview {
+      width: 16px;
+      height: 16px;
+      display: inline-block;
+      margin-right: 8px;
+      border-radius: 50%;
+      border: 1px solid #ddd;
+      vertical-align: middle;
+    }
+  `;
+  document.head.appendChild(style);
+
+  document.body.appendChild(modal);
+  cargarFigurasMultiples();
+}
+
+function filtrarFiguras(searchTerm) {
+  const select = document.getElementById('figureSelect');
+  Array.from(select.options).forEach(option => {
+    const matchesSearch = option.text.toLowerCase().includes(searchTerm.toLowerCase());
+    option.style.display = matchesSearch ? '' : 'none';
+  });
+}
+
+function cargarFigurasMultiples() {
+  google.script.run
+    .withSuccessHandler(figures => {
+      const select = document.getElementById('figureSelect');
+      select.innerHTML = figures
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .map(f => `<option value="${f.id}">${f.name}</option>`)
+        .join('');
+      
+      select.addEventListener('change', () => {
+        const selectedOptions = Array.from(select.selectedOptions);
+        if (selectedOptions.length > 6) {
+          showNotification('Máximo 6 figuras permitidas');
+          select.value = Array.from(select.selectedOptions)
+            .slice(0, 6)
+            .map(opt => opt.value);
+        }
+        actualizarFigurasSeleccionadas(selectedOptions);
+        recalcularTotalesMultiples();
+      });
+    })
+    .getFigures();
+}
+
+function actualizarFigurasSeleccionadas(selectedOptions) {
+  const container = document.getElementById('figurasSelecionadas');
+  container.innerHTML = selectedOptions
+    .map(option => `
+      <div class="figura-seleccionada" data-figure-id="${option.value}"
+           style="background: #f8f9fa; padding: 8px 12px; border-radius: 4px; border: 1px solid #ddd;">
+        ${option.text}
+      </div>
+    `)
+    .join('');
+}
+
+function cargarYBuscarFiguras() {
+  google.script.run.withSuccessHandler(figures => {
+    const searchInput = document.getElementById('figureSearch');
+    const figuresList = document.getElementById('figuresList');
+    let allFigures = figures;
+
+    function actualizarLista(searchTerm = '') {
+      const filtered = allFigures.filter(f => 
+        f.name.toLowerCase().includes(searchTerm.toLowerCase()));
+      
+      figuresList.innerHTML = filtered.map(f => `
+        <div class="figure-item" style="padding: 0.5rem; cursor: pointer; display: flex; align-items: center;">
+          <input type="checkbox" value="${f.id}" 
+                 onchange="seleccionarFiguraMultiple('${f.id}', '${f.name}')"
+                 ${document.querySelectorAll('.figura-seleccionada').length >= 6 ? 'disabled' : ''}>
+          <span style="margin-left: 0.5rem;">${f.name}</span>
+        </div>
+      `).join('');
+    }
+
+    searchInput.addEventListener('input', (e) => actualizarLista(e.target.value));
+    actualizarLista();
+  }).getFigures();
+}
+
+function seleccionarFiguraMultiple(figureId, figureName) {
+  const selectedContainer = document.getElementById('figurasSelecionadas');
+  if (selectedContainer.children.length >= 6) {
+    showNotification('Máximo 6 figuras permitidas');
+    return;
+  }
+
+  const figuraDiv = document.createElement('div');
+  figuraDiv.className = 'figura-seleccionada';
+  figuraDiv.dataset.figureId = figureId;
+  figuraDiv.innerHTML = `
+    <div style="background: #f5f5f5; padding: 0.5rem; border-radius: 4px; display: flex; justify-content: space-between; align-items: center;">
+      <span>${figureName}</span>
+      <button class="btn" onclick="this.closest('.figura-seleccionada').remove(); recalcularTotalesMultiples();">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+  `;
+
+  selectedContainer.appendChild(figuraDiv);
+  recalcularTotalesMultiples();
+}
+
+function recalcularTotalesMultiples() {
+  const studentCount = parseInt(document.getElementById('totalStudentCount').value) || 1;
+  const safetyMargin = parseFloat(document.getElementById('totalSafetyMargin').value) || 0;
+  const marginMultiplier = 1 + (safetyMargin / 100);
+  const coloresTotales = {};
+
+  const selectedFigures = document.querySelectorAll('#figureSelect option:checked');
+  let pendingFigures = selectedFigures.length;
+
+  if (pendingFigures === 0) {
+    actualizarTablaTotales({});
+    return;
+  }
+
+  selectedFigures.forEach(option => {
+    google.script.run
+      .withSuccessHandler(figura => {
+        // Procesar cada fila de la figura
+        figura.rows.forEach(row => {
+          const units = parseInt(row.units) || 1;
+          
+          if (row.part.startsWith('Barreja')) {
+            // Solo procesar la barreja una vez, sumando sus componentes
+            Object.entries(row.letters).forEach(([letra, cantidad]) => {
+              const peso = parseFloat(cantidad) * (pesosLetras[letra] || 0) * units;
+              // Sumar al color de esta parte de la barreja
+              coloresTotales[row.color] = (coloresTotales[row.color] || 0) + 
+                (peso * studentCount * marginMultiplier);
+            });
+          } else {
+            // Procesar partes normales
+            let pesoTotal = 0;
+            Object.entries(row.letters).forEach(([letra, cantidad]) => {
+              pesoTotal += parseFloat(cantidad) * (pesosLetras[letra] || 0);
+            });
+            pesoTotal *= units;
+            
+            // Sumar al color correspondiente
+            coloresTotales[row.color] = (coloresTotales[row.color] || 0) + 
+              (pesoTotal * studentCount * marginMultiplier);
+          }
+        });
+
+        pendingFigures--;
+        if (pendingFigures === 0) {
+          actualizarTablaTotales(coloresTotales);
+        }
+      })
+      .getFigureById(option.value);
+  });
+}
+
+function actualizarTablaTotales(coloresTotales) {
+  const tbody = document.getElementById('totalesBody');
+  tbody.innerHTML = Object.entries(coloresTotales)
+    // Filtrar para no mostrar las barejas
+    .filter(([color, _]) => !color.toLowerCase().startsWith('barreja'))
+    .map(([color, peso]) => `
+      <tr>
+        <td>
+          <div class="color-preview" style="background-color: ${colores[color]}"></div>
+          ${color}
+        </td>
+        <td style="text-align: right;">${peso.toFixed(2)} gr</td>
+        <td style="text-align: center;">${Math.ceil(peso / 48)}</td>
+      </tr>
+    `)
+    .join('');
+}
+
+function actualizarVisualizacionTotales(coloresTotales, mezclasTotales) {
+  const container = document.getElementById('totalesCombinados');
+  
+  let html = `
+    <table class="main-table">
+      <thead>
+        <tr>
+          <th>Material</th>
+          <th>Gramos Totales</th>
+          <th>Sobres (48gr)</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${Object.entries(coloresTotales).map(([color, peso]) => `
+          <tr>
+            <td>
+              <div class="color-preview" style="background: ${colores[color]}"></div>
+              ${color}
+            </td>
+            <td>${peso.toFixed(2)} gr</td>
+            <td>${Math.ceil(peso / 48)}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+    
+    ${mezclasTotales.size > 0 ? `
+      <h4 style="margin-top: 1rem;">Mezclas</h4>
+      <table class="main-table">
+        <thead>
+          <tr>
+            <th>Mezcla</th>
+            <th>Composición</th>
+            <th>Peso Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${Array.from(mezclasTotales.entries()).map(([nombre, mezcla]) => `
+            <tr>
+              <td>${nombre}</td>
+              <td>
+                ${mezcla.components.map(comp => `
+                  <div class="mezcla-componente">
+                    <div class="color-preview" style="background: ${colores[comp.color]}"></div>
+                    ${comp.color}: ${comp.weight.toFixed(2)} gr
+                  </div>
+                `).join('')}
+              </td>
+              <td>${mezcla.totalWeight.toFixed(2)} gr</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    ` : ''}
+  `;
+  
+  container.innerHTML = html;
+}
+
+function exportarCalculoMultiple() {
+  const studentCount = parseInt(document.getElementById('totalStudentCount').value) || 1;
+  const safetyMargin = parseFloat(document.getElementById('totalSafetyMargin').value) || 0;
+  
+  let csv = `Cálculo de Material Múltiple\n`;
+  csv += `Número de Alumnos,${studentCount}\n`;
+  csv += `Margen de Seguridad,${safetyMargin}%\n\n`;
+  
+  // Exportar totales por color
+  csv += 'TOTALES POR COLOR\n';
+  csv += 'Color,Gramos Totales,Sobres (48gr)\n';
+  
+  const colorRows = document.querySelectorAll('#totalesCombinados .main-table:first-of-type tbody tr');
+  colorRows.forEach(row => {
+    const cells = row.querySelectorAll('td');
+    const color = cells[0].textContent.trim();
+    const gramos = cells[1].textContent.trim();
+    const sobres = cells[2].textContent.trim();
+    csv += `${color},${gramos},${sobres}\n`;
+  });
+  
+  // Exportar mezclas
+  const mezclaRows = document.querySelectorAll('#totalesCombinados .main-table:last-of-type tbody tr');
+  if (mezclaRows.length > 0) {
+    csv += '\nMEZCLAS\n';
+    csv += 'Mezcla,Composición,Peso Total\n';
+    
+    mezclaRows.forEach(row => {
+      const cells = row.querySelectorAll('td');
+      const nombreMezcla = cells[0].textContent.trim();
+      const componentes = Array.from(cells[1].querySelectorAll('.mezcla-componente'))
+        .map(comp => comp.textContent.trim())
+        .join('; ');
+      const pesoTotal = cells[2].textContent.trim();
+      
+      csv += `${nombreMezcla},"${componentes}",${pesoTotal}\n`;
+    });
+  }
+  
+  // Crear y descargar el archivo CSV
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.setAttribute('hidden', '');
+  a.setAttribute('href', url);
+  a.setAttribute('download', 'calculo_multiple.csv');
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+function imprimirCalculoMultiple() {
+  const printWindow = window.open('', '_blank');
+  const contenido = document.getElementById('totalContent').cloneNode(true);
+  const figurasSelecionadas = document.getElementById('figurasSelecionadas').cloneNode(true);
+  
+  printWindow.document.write(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Cálculo de Material</title>
+      <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        .color-preview {
+          width: 16px;
+          height: 16px;
+          display: inline-block;
+          margin-right: 8px;
+          border-radius: 50%;
+          border: 1px solid #ddd;
+        }
+      </style>
+    </head>
+    <body>
+      <h2>Cálculo de Material para Múltiples Figuras</h2>
+      <div>
+        <p>Número de Alumnos: ${document.getElementById('totalStudentCount').value}</p>
+        <p>Margen de seguridad: ${document.getElementById('totalSafetyMargin').value}%</p>
+      </div>
+      <h3>Figuras Seleccionadas</h3>
+      ${figurasSelecionadas.innerHTML}
+      ${contenido.innerHTML}
+    </body>
+    </html>
+  `);
+  
+  printWindow.document.close();
+  printWindow.print();
+}
+
+// Actualizar las funciones principales para usar el nuevo sistema
+async function addNewGroup() {
+  const groupName = await Dialog.prompt('Nombre del nuevo grupo:');
+  if (groupName && !tagGroups[groupName]) {
+    tagGroups[groupName] = [];
+    updateTagsDisplay();
+    google.script.run.withSuccessHandler(() => {
+      console.log(`Grupo "${groupName}" añadido.`);
+    }).addGroup(groupName);
+  }
+}
+
+async function addTagToGroup(groupName) {
+  const tagName = await Dialog.prompt(`Nueva parte para ${groupName}:`);
+  if (tagName && !tagGroups[groupName].includes(tagName)) {
+    tagGroups[groupName].push(tagName);
+    updateTagsDisplay();
+    google.script.run.withSuccessHandler(() => {
+      console.log(`Parte "${tagName}" añadida al grupo "${groupName}".`);
+    }).addTag(groupName, tagName);
+  }
+}
+
+async function deleteRow(row) {
+  const confirmed = await Dialog.confirm('¿Seguro que quieres eliminar esta fila?');
+  if (confirmed) {
+    row.remove();
+    updateBarejaNumbers();
+    calculateTotals();
+  }
+}
+// Initialize
+document.addEventListener('DOMContentLoaded', function() {
+  // Estilos combinados
+  const newStyles = `
+  .barreja-option {
+    background-color: #f5f5f5 !important;
+    font-style: italic;
+  }
+  
+  select option:disabled {
+    color: #999;
+    background-color: #f5f5f5;
+  }
+
+  .app-logo {
+    height: 40px;
+    margin-right: 15px;
+    background: white;
+    padding: 5px;
+    border-radius: 4px;
+  }
+
+  .header-with-logo {
+    display: flex;
+    align-items: center;
+    margin-bottom: 15px;
+  }
+
+  /* Nuevos estilos para botones de grupo */
+  .delete-group-btn {
+  color: rgba(255,255,255,0.8) !important;
+}
+
+  .delete-group-btn:hover {
+  color: #fff !important;
+}
+
+  .group-header .btn {
+  background: transparent;
+  border: none;
+  color: white;
+  padding: 4px;
+  margin-left: 4px;
+  opacity: 0.8;
+  transition: all 0.2s;
+}
+
+  .group-header .btn:hover {
+  opacity: 1;
+}
+`;
+  const styleSheet = document.createElement('style');
+  styleSheet.textContent = newStyles;
+  document.head.appendChild(styleSheet);
+
+  // Actualizar el header principal
+  updateMainHeader();
+
+  // Cargar grupos desde el backend
+  google.script.run
+    .withSuccessHandler(function(groups) {
+      tagGroups = groups;
+      updateTagsDisplay();
+    })
+    .getGroups();
+
+  // Cargar pesos de letras desde el backend
+  google.script.run
+    .withSuccessHandler(function(pesos) {
+      pesosLetras = pesos;
+      createWeightConfigs();
+      document.querySelectorAll('#tableBody tr').forEach(row => {
+        calculateRowWeight(row);
+      });
+    })
+    .getLetterWeights();
+
+  // Añadir primera fila
+  addRow();
+});
+
+/**
+ * Función para abrir la aplicación de procesamiento de imágenes
+ * Esta función abre la aplicación de conversión de tablas en una nueva ventana
+ */
+function abrirProcesadorImagenes() {
+  // URL de la aplicación web implementada
+  var url = "https://script.google.com/macros/s/AKfycby2Mc15xSV37hn6u2pusSSA6gV6Zun60rDdekHH8QjgHuFjUR7nL4NM7cSqOEbKi91jhg/exec";
+  
+  try {
+    // Abrir la URL en una nueva ventana
+    window.open(url, "_blank");
+  } catch (error) {
+    alert("Error al abrir la aplicación de conversión: " + error);
+  }
+}
+
+</script>
+
+</body>
+</html>

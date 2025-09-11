@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CalculArgila - Cámara</title>
+  <style>
+    :root {
+      --primary: #7c4c3e;
+      --secondary: #b87c6d;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center; /* Centrar contenido */
+      height: 100vh;
+      background: #000;
+      font-family: Arial, sans-serif;
+    }
+    
+    #video {
+      width: 100vh; /* Usar altura de la ventana como referencia */
+      height: 100vh;
+      max-width: 100vw; /* Evitar que sea más ancho que la ventana */
+      max-height: calc(100vh - 80px); /* Restar altura de los controles */
+      object-fit: cover;
+      background: #111;
+      margin: 0 auto; /* Centrar horizontalmente */
+    }
+    
+    .controls {
+      width: 100%;
+      height: 80px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: rgba(0, 0, 0, 0.8);
+      padding: 10px;
+      gap: 20px;
+      box-sizing: border-box;
+      position: fixed;
+      bottom: 0;
+    }
+    
+    .capture-btn {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background: var(--primary);
+      border: 3px solid white;
+      color: white;
+      font-size: 24px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s ease;
+    }
+    
+    .capture-btn:hover {
+      background: var(--secondary);
+      transform: scale(1.1);
+    }
+    
+    .switch-camera-btn {
+      padding: 8px 16px;
+      background: var(--primary);
+      border: none;
+      border-radius: 20px;
+      color: white;
+      cursor: pointer;
+    }
+
+    .switch-camera-btn:hover {
+      background: var(--secondary);
+    }
+
+    #loading {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.8);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      color: white;
+      z-index: 1000;
+    }
+
+    #message {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.8);
+      color: white;
+      padding: 10px 20px;
+      border-radius: 20px;
+      display: none;
+      z-index: 1001;
+    }
+  </style>
+</head>
+<body>
+  <video id="video"></video>
+  <div class="controls">
+    <button class="capture-btn" onclick="capturar()" title="Tomar foto" aria-label="Tomar foto">
+    <i class="fa-solid fa-camera"></i>
+    </button>
+    <button class="switch-camera-btn" onclick="cambiarCamara()">Cambiar cámara</button>
+  </div>
+  <div id="loading">Guardando imagen...</div>
+  <div id="message"></div>
+
+  <script>
+    let currentFacingMode = 'environment';
+    let currentStream = null;
+
+    async function iniciarCamara(facingMode = 'environment') {
+      try {
+        if (currentStream) {
+          currentStream.getTracks().forEach(track => track.stop());
+        }
+
+        const constraints = {
+          video: { facingMode },
+        };
+
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        const video = document.getElementById('video');
+        video.srcObject = stream;
+        video.play();
+
+        currentStream = stream;
+        showMessage('Cámara iniciada');
+      } catch (err) {
+        console.error('Error al iniciar la cámara:', err);
+        showMessage('Error al acceder a la cámara');
+      }
+    }
+
+    function cambiarCamara() {
+      const newMode = currentFacingMode === 'environment' ? 'user' : 'environment';
+      iniciarCamara(newMode);
+    }
+
+    function showMessage(text) {
+      const message = document.getElementById('message');
+      message.textContent = text;
+      message.style.display = 'block';
+      setTimeout(() => message.style.display = 'none', 2000);
+    }
+
+    async function capturar() {
+  const video = document.getElementById('video');
+  const canvas = document.createElement('canvas');
+  
+  // Cambiar a dimensiones cuadradas (1:1)
+  const size = 1080; // Usar 1080x1080 para mantener buena calidad
+  canvas.width = size;
+  canvas.height = size;
+  
+  const ctx = canvas.getContext('2d');
+
+  // Calcular dimensiones para recorte cuadrado
+  const minDimension = Math.min(video.videoWidth, video.videoHeight);
+  const sx = (video.videoWidth - minDimension) / 2;
+  const sy = (video.videoHeight - minDimension) / 2;
+
+  if (currentFacingMode === 'user') {
+    ctx.scale(-1, 1);
+    ctx.translate(-canvas.width, 0);
+  }
+
+  // Dibujar solo la parte cuadrada central del video
+  ctx.drawImage(video, 
+    sx, sy,                   // Punto de inicio del recorte
+    minDimension, minDimension,  // Tamaño del recorte (cuadrado)
+    0, 0,                     // Posición en el canvas
+    size, size                // Tamaño final en el canvas
+  );
+
+  // Pedir nombre para la imagen
+  let imageName = prompt('Nombre para la imagen:', '');
+  if (imageName === null) return; // Si cancela el prompt
+
+  imageName = imageName.trim().replace(/[^a-zA-Z0-9_-]/g, '_').toLowerCase();
+  if (!imageName) imageName = 'figura';
+
+  document.getElementById('loading').style.display = 'flex';
+
+  canvas.toBlob((blob) => {
+    const reader = new FileReader();
+    reader.onloadend = function () {
+      const base64data = reader.result;
+      google.script.run
+        .withSuccessHandler((response) => {
+          document.getElementById('loading').style.display = 'none';
+          showMessage('Imagen guardada como: ' + response.name);
+          setTimeout(() => window.close(), 1500);
+        })
+        .withFailureHandler((error) => {
+          document.getElementById('loading').style.display = 'none';
+          showMessage('Error: ' + error.message);
+        })
+        .saveImage(base64data, imageName);
+    };
+    reader.readAsDataURL(blob);
+  }, 'image/jpeg', 0.8);
+}
+
+    window.onload = () => iniciarCamara();
+  </script>
+</body>
+</html>
