@@ -1629,6 +1629,9 @@
         <button class="btn" onclick="mostrarCalculadoraMultiple()" data-tooltip="Calcular material para múltiples figuras">
           <i class="fas fa-calculator"></i> Calcular Múltiples Figuras
         </button>
+        <button class="btn" onclick="mostrarPreparacionExtraescolares()" data-tooltip="Preparar material para extraescolares">
+          <i class="fas fa-school"></i> Preparar Extraescolares
+        </button>
         <button class="btn" onclick="abrirProcesadorImagenes()" data-tooltip="Convertir imagen a tabla">
           <i class="fas fa-table"></i> Convertir Tabla
         </button>
@@ -2464,37 +2467,45 @@
   function calculateTallerTotals(rows, mode = 'separate') {
     const colorTotals = {};
     const mezclas = new Map();
-    
-    rows.forEach(row => {
-      const partInput = row.querySelector('.part-input');
-      const color = row.querySelector('select').value;
-      const weight = parseFloat(row.querySelector('.weight-cell').textContent) || 0;
-      
-      if (partInput.value.startsWith('Barreja')) {
-        const barejaNum = partInput.value;
-        
-        if (!mezclas.has(barejaNum)) {
-          mezclas.set(barejaNum, {
-            name: barejaNum,
-            components: [],
-            totalWeight: 0
-          });
-        }
-        
-        const barreja = mezclas.get(barejaNum);
-        barreja.components.push({
-          color: color,
-          weight: weight
-        });
-        barreja.totalWeight += weight;
 
-        // En modo combined, sumamos los componentes al total por color
-        if (mode === 'combined') {
+    rows.forEach(row => {
+      try {
+        const partInput = row.querySelector('.part-input');
+        const selectEl = row.querySelector('select');
+        const weightCell = row.querySelector('.weight-cell');
+
+        if (!partInput || !selectEl || !weightCell) return;
+
+        const color = selectEl.value;
+        const weight = parseFloat(weightCell.textContent) || 0;
+        const partValue = (partInput.value || '').trim();
+
+        if (partValue.startsWith('Barreja')) {
+          const barejaNum = partValue;
+
+          if (!mezclas.has(barejaNum)) {
+            mezclas.set(barejaNum, {
+              name: barejaNum,
+              components: [],
+              totalWeight: 0
+            });
+          }
+
+          const barreja = mezclas.get(barejaNum);
+          barreja.components.push({
+            color: color,
+            weight: weight
+          });
+          barreja.totalWeight += weight;
+
+          if (mode === 'combined') {
+            colorTotals[color] = (colorTotals[color] || 0) + weight;
+          }
+        } else if (!color.startsWith('Barreja')) {
           colorTotals[color] = (colorTotals[color] || 0) + weight;
         }
-      } else if (!color.startsWith('Barreja')) {
-        // Sumar colores normales siempre
-        colorTotals[color] = (colorTotals[color] || 0) + weight;
+      } catch (e) {
+        console.warn('Error procesando fila en calculateTallerTotals:', e);
       }
     });
 
@@ -2502,139 +2513,194 @@
   }
 
   function updateTalleresCalc() {
-    const rows = Array.from(document.querySelectorAll('#tableBody tr'));
-    const mode = document.getElementById('calculationMode').value;
-    const studentCount = parseInt(document.getElementById('studentCount').value) || 1;
-    const safetyMargin = parseFloat(document.getElementById('safetyMargin').value) || 0;
-    
-    const { colorTotals, mezclas } = calculateTallerTotals(rows, mode);
-    const resultsContainer = document.getElementById('calculationResults');
+    try {
+      const rows = Array.from(document.querySelectorAll('#tableBody tr'));
+      const modeEl = document.getElementById('calculationMode');
+      const studentCountEl = document.getElementById('studentCount');
+      const safetyMarginEl = document.getElementById('safetyMargin');
+      const resultsContainer = document.getElementById('calculationResults');
 
-    // Función para aplicar el margen de seguridad
-    const applyMargin = (weight) => {
-      const margin = 1 + (safetyMargin / 100);
-      return weight * margin;
-    };
+      if (!modeEl || !studentCountEl || !safetyMarginEl || !resultsContainer) {
+        console.error('updateTalleresCalc: elementos del modal no encontrados');
+        return;
+      }
 
-    // Multiplicar los totales por el número de alumnos y aplicar margen de seguridad
-    Object.keys(colorTotals).forEach(color => {
-      colorTotals[color] = applyMargin(colorTotals[color] * studentCount);
-    });
+      const mode = modeEl.value;
+      const studentCount = parseInt(studentCountEl.value) || 1;
+      const safetyMargin = parseFloat(safetyMarginEl.value) || 0;
 
-    let html = `
-      <h3>Cantidades por Color${mode === 'combined' ? ' (incluye mezclas)' : ' (sin mezclas)'}</h3>
-      <p style="color: #666; font-size: 0.9em; margin-bottom: 1rem;">
-        * Cantidades incluyen un margen de seguridad del ${safetyMargin}%
-      </p>
-      <table class="main-table" style="margin-bottom: 1rem;">
-        <thead>
-          <tr>
-            <th>Color</th>
-            <th>Gramos Totales</th>
-            <th>Sobres (48gr)</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${Object.entries(colorTotals).map(([color, weight]) => `
-            <tr>
-              <td>
-                <div class="color-preview" style="background: ${colores[color]}"></div>
-                ${color}
-              </td>
-              <td class="weight-total" data-base-weight="${weight/studentCount}">${weight.toFixed(2)} gr</td>
-              <td class="sobres-count">${Math.ceil(weight / 48)}</td>
-            </tr>
-          `).join('')}
-        </tbody>
-      </table>
-    `;
+      const { colorTotals, mezclas } = calculateTallerTotals(rows, mode);
 
-    if (mode === 'separate' && mezclas.size) {
-      html += `
-        <h3>Mezclas</h3>
-        <table class="main-table mezclas-table">
-          <thead>
-            <tr>
-              <th>Mezcla</th>
-              <th>Composición</th>
-              <th>Peso Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${Array.from(mezclas.values()).map(m => {
-              const totalMezcla = applyMargin(m.totalWeight * studentCount);
-              return `
-                <tr>
-                  <td>${m.name}</td>
-                  <td>
-                    ${m.components.map(comp => `
-                      <div class="mezcla-componente">
-                        <div class="color-preview" style="background: ${colores[comp.color]}"></div>
-                        ${comp.color}
-                        <span class="component-weight" data-base-weight="${comp.weight}">
-                          ${applyMargin(comp.weight * studentCount).toFixed(2)} gr
-                        </span>
-                      </div>
-                    `).join('')}
-                  </td>
-                  <td class="mezcla-weight" data-base-weight="${m.totalWeight}">
-                    ${totalMezcla.toFixed(2)} gr
-                  </td>
-                </tr>
-              `;
-            }).join('')}
-          </tbody>
-        </table>
-      `;
+      const applyMargin = (weight) => {
+        const margin = 1 + (safetyMargin / 100);
+        return weight * margin;
+      };
+
+      Object.keys(colorTotals).forEach(color => {
+        colorTotals[color] = applyMargin(colorTotals[color] * studentCount);
+      });
+
+      // Construir tabla de colores
+      let html = '';
+
+      if (mode === 'separate') {
+        // MODO PREPARADO: colores individuales + recetas de mezclas separadas
+        html += '<h3>Colores individuales (sin mezclas)</h3>';
+        html += '<p style="color: #666; font-size: 0.9em; margin-bottom: 1rem;">';
+        html += '* Cantidades para ' + studentCount + ' alumno(s) con margen del ' + safetyMargin + '%</p>';
+
+        html += '<table class="main-table" style="margin-bottom: 1rem;">';
+        html += '<thead><tr><th>Color</th><th>Gramos Totales</th><th>Sobres (48gr)</th></tr></thead>';
+        html += '<tbody>';
+        Object.entries(colorTotals).forEach(function(entry) {
+          var color = entry[0], weight = entry[1];
+          html += '<tr>';
+          html += '<td><div class="color-preview" style="background: ' + (colores[color] || '#ccc') + '"></div>' + color + '</td>';
+          html += '<td class="weight-total" data-base-weight="' + (weight/studentCount) + '">' + weight.toFixed(2) + ' gr</td>';
+          html += '<td class="sobres-count">' + Math.ceil(weight / 48) + '</td>';
+          html += '</tr>';
+        });
+        html += '</tbody></table>';
+
+        // Sección de mezclas preparadas con proporciones
+        if (mezclas.size > 0) {
+          html += '<h3>Proporciones de Mezclas (para preparar antes del taller)</h3>';
+          html += '<table class="main-table mezclas-table">';
+          html += '<thead><tr><th>Mezcla</th><th>Composición y Proporciones</th><th>Peso Total</th></tr></thead>';
+          html += '<tbody>';
+
+          mezclas.forEach(function(m) {
+            var totalMezcla = applyMargin(m.totalWeight * studentCount);
+            html += '<tr>';
+            html += '<td>' + m.name + '</td>';
+            html += '<td>';
+            m.components.forEach(function(comp) {
+              var compWeight = applyMargin(comp.weight * studentCount);
+              var pct = m.totalWeight > 0 ? ((comp.weight / m.totalWeight) * 100).toFixed(1) : '0.0';
+              html += '<div class="mezcla-componente">';
+              html += '<div class="color-preview" style="background: ' + (colores[comp.color] || '#ccc') + '"></div>';
+              html += comp.color;
+              html += '<span class="component-weight" data-base-weight="' + comp.weight + '">';
+              html += ' ' + compWeight.toFixed(2) + ' gr (' + pct + '%)';
+              html += '</span>';
+              html += '</div>';
+            });
+            html += '</td>';
+            html += '<td class="mezcla-weight" data-base-weight="' + m.totalWeight + '">' + totalMezcla.toFixed(2) + ' gr</td>';
+            html += '</tr>';
+          });
+
+          html += '</tbody></table>';
+        } else {
+          html += '<p style="color: #999; font-style: italic;">No hay mezclas (Barreja) definidas en esta figura.</p>';
+        }
+
+      } else {
+        // MODO COMBINADO: todos los colores sumados para llevar al taller
+        html += '<h3>Cantidades por Color (incluye mezclas)</h3>';
+        html += '<p style="color: #666; font-size: 0.9em; margin-bottom: 1rem;">';
+        html += '* Lleva estos colores por separado y mezcla en el taller. ';
+        html += 'Cantidades para ' + studentCount + ' alumno(s) con margen del ' + safetyMargin + '%</p>';
+
+        html += '<table class="main-table" style="margin-bottom: 1rem;">';
+        html += '<thead><tr><th>Color</th><th>Gramos Totales</th><th>Sobres (48gr)</th></tr></thead>';
+        html += '<tbody>';
+        Object.entries(colorTotals).forEach(function(entry) {
+          var color = entry[0], weight = entry[1];
+          html += '<tr>';
+          html += '<td><div class="color-preview" style="background: ' + (colores[color] || '#ccc') + '"></div>' + color + '</td>';
+          html += '<td class="weight-total" data-base-weight="' + (weight/studentCount) + '">' + weight.toFixed(2) + ' gr</td>';
+          html += '<td class="sobres-count">' + Math.ceil(weight / 48) + '</td>';
+          html += '</tr>';
+        });
+        html += '</tbody></table>';
+
+        // En modo combinado, también mostrar las recetas de las mezclas como referencia
+        if (mezclas.size > 0) {
+          html += '<h3>Recetas de Mezclas (referencia para el taller)</h3>';
+          html += '<table class="main-table mezclas-table">';
+          html += '<thead><tr><th>Mezcla</th><th>Composición</th><th>Peso por unidad</th></tr></thead>';
+          html += '<tbody>';
+
+          mezclas.forEach(function(m) {
+            html += '<tr>';
+            html += '<td>' + m.name + '</td>';
+            html += '<td>';
+            m.components.forEach(function(comp) {
+              var pct = m.totalWeight > 0 ? ((comp.weight / m.totalWeight) * 100).toFixed(1) : '0.0';
+              html += '<div class="mezcla-componente">';
+              html += '<div class="color-preview" style="background: ' + (colores[comp.color] || '#ccc') + '"></div>';
+              html += comp.color + ' <span class="peso">' + comp.weight.toFixed(2) + ' gr (' + pct + '%)</span>';
+              html += '</div>';
+            });
+            html += '</td>';
+            html += '<td>' + m.totalWeight.toFixed(2) + ' gr</td>';
+            html += '</tr>';
+          });
+
+          html += '</tbody></table>';
+        }
+      }
+
+      resultsContainer.innerHTML = html;
+
+    } catch (error) {
+      console.error('Error en updateTalleresCalc:', error);
+      var container = document.getElementById('calculationResults');
+      if (container) {
+        container.innerHTML = '<p style="color: red;">Error al calcular: ' + error.message + '</p>';
+      }
     }
-
-    resultsContainer.innerHTML = html;
   }
 
   function mostrarTalleres() {
+    // Limpiar modales anteriores de talleres para evitar IDs duplicados
+    document.querySelectorAll('.modal-talleres').forEach(function(m) { m.remove(); });
+
     const figureName = document.querySelector('.header input').value || 'Sin nombre';
-    
+
     const modal = document.createElement('div');
-    modal.className = 'modal';
+    modal.className = 'modal modal-talleres';
     modal.innerHTML = `
-      <div class="modal-content" style="min-width: 600px;">
-        <h2>Cálculo de Talleres</h2>
-        
+      <div class="modal-content" style="min-width: 600px; max-height: 90vh; overflow-y: auto;">
+        <h2>Cálculo de Talleres - ${figureName}</h2>
+
         <div style="margin: 1rem 0">
           <div style="display: grid; grid-template-columns: auto 1fr; gap: 0.5rem; align-items: center;">
             <label>Nombre de la Escuela:</label>
             <input type="text" id="schoolName">
-            
+
             <label>Curso:</label>
             <input type="text" id="courseName">
-            
+
             <label>Número de Alumnos:</label>
-            <input type="number" id="studentCount" min="1" value="1" onchange="updateTalleresCalc()">
-            
+            <input type="number" id="studentCount" min="1" value="1" oninput="updateTalleresCalc()" onchange="updateTalleresCalc()">
+
             <label>Margen de seguridad (%):</label>
             <div style="display: flex; align-items: center; gap: 0.5rem;">
-              <input type="number" 
-                     id="safetyMargin" 
-                     min="0" 
-                     max="100" 
-                     value="0" 
+              <input type="number"
+                     id="safetyMargin"
+                     min="0"
+                     max="100"
+                     value="0"
+                     oninput="updateTalleresCalc()"
                      onchange="updateTalleresCalc()"
                      style="width: 80px;">
               <span style="color: #666; font-size: 0.9em;">
                 (0-100%)
               </span>
             </div>
-            
+
             <label>Modo de cálculo:</label>
             <select id="calculationMode" onchange="updateTalleresCalc()">
-              <option value="separate">Mezclas Preparadas (separado)</option>
-              <option value="combined">Mezclas en Taller (sumado)</option>
+              <option value="separate">Preparar mezclas antes (proporciones)</option>
+              <option value="combined">Llevar colores al taller (sumado)</option>
             </select>
           </div>
         </div>
 
         <div id="calculationResults">
-          <!-- Los resultados se actualizarán dinámicamente -->
+          <p style="color: #999;">Calculando...</p>
         </div>
 
         <div class="controls" style="margin-top: 1rem;">
@@ -2655,7 +2721,8 @@
     `;
 
     document.body.appendChild(modal);
-    updateTalleresCalc();
+    // Pequeño delay para asegurar que el DOM está listo
+    setTimeout(function() { updateTalleresCalc(); }, 50);
   }
 
   function saveTalleresToSheet() {
@@ -2703,45 +2770,52 @@
   }
 
   function exportTalleresCSV() {
-    const schoolName = document.getElementById('schoolName').value;
-    const courseName = document.getElementById('courseName').value;
-    const studentCount = document.getElementById('studentCount').value;
-    const calculationMode = document.getElementById('calculationMode').value;
-    
-    let csv = `Escuela,${schoolName}\nCurso,${courseName}\nAlumnos,${studentCount}\nModo,${calculationMode}\n\n`;
-    csv += 'Color,Gramos Totales,Sobres\n';
-    
-    document.querySelectorAll('.main-table tbody tr').forEach(row => {
-      const cells = row.querySelectorAll('td');
-      if (cells.length === 3) {
-        const color = cells[0].textContent.trim();
-        const weight = cells[1].textContent.trim();
-        const sobres = cells[2].textContent.trim();
-        csv += `"${color}",${weight},${sobres}\n`;
-      }
-    });
+    try {
+      const schoolName = document.getElementById('schoolName').value;
+      const courseName = document.getElementById('courseName').value;
+      const studentCount = document.getElementById('studentCount').value;
+      const calculationMode = document.getElementById('calculationMode').value;
 
-    // Añadir mezclas si están en modo separado
-    if (calculationMode === 'separate') {
-      csv += '\nMezclas\nNombre,Composición,Peso Total\n';
-      document.querySelectorAll('.mezclas-table tbody tr').forEach(row => {
-        const name = row.querySelector('td:nth-child(1)').textContent.trim();
-        const components = Array.from(row.querySelectorAll('.mezcla-componente'))
-          .map(comp => `${comp.textContent.trim()}`).join('; ');
-        const total = row.querySelector('.mezcla-weight').textContent.trim();
-        csv += `"${name}","${components}","${total}"\n`;
+      let csv = 'Escuela,' + schoolName + '\nCurso,' + courseName + '\nAlumnos,' + studentCount + '\nModo,' + calculationMode + '\n\n';
+      csv += 'Color,Gramos Totales,Sobres\n';
+
+      var resultsContainer = document.getElementById('calculationResults');
+      if (!resultsContainer) return;
+
+      resultsContainer.querySelectorAll('.main-table:not(.mezclas-table) tbody tr').forEach(function(row) {
+        var cells = row.querySelectorAll('td');
+        if (cells.length === 3) {
+          csv += '"' + cells[0].textContent.trim() + '",' + cells[1].textContent.trim() + ',' + cells[2].textContent.trim() + '\n';
+        }
       });
+
+      // Añadir mezclas siempre que existan
+      var mezclaRows = resultsContainer.querySelectorAll('.mezclas-table tbody tr');
+      if (mezclaRows.length > 0) {
+        csv += '\nMezclas\nNombre,Composición,Peso Total\n';
+        mezclaRows.forEach(function(row) {
+          var name = row.querySelector('td:nth-child(1)').textContent.trim();
+          var components = Array.from(row.querySelectorAll('.mezcla-componente'))
+            .map(function(comp) { return comp.textContent.trim(); }).join('; ');
+          var totalCell = row.querySelector('.mezcla-weight');
+          var total = totalCell ? totalCell.textContent.trim() : row.querySelector('td:last-child').textContent.trim();
+          csv += '"' + name + '","' + components + '","' + total + '"\n';
+        });
+      }
+
+      var blob = new Blob([csv], { type: 'text/csv' });
+      var url = window.URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.setAttribute('hidden', '');
+      a.setAttribute('href', url);
+      a.setAttribute('download', 'talleres.csv');
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error('Error exportando CSV:', error);
+      showNotification('Error al exportar: ' + error.message);
     }
-    
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.setAttribute('hidden', '');
-    a.setAttribute('href', url);
-    a.setAttribute('download', 'talleres.csv');
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
   }
 
   function exportToExcel() {
@@ -3233,6 +3307,122 @@
       });
     }
   };
+
+  function mostrarPreparacionExtraescolares() {
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.innerHTML = `
+      <div class="modal-content" style="width: 90vw; max-width: 800px;">
+        <h2 style="margin-bottom: 1rem;">Preparación de Extraescolares</h2>
+        
+        <div id="alert-container-extraescolares"></div>
+
+        <div class="form-group">
+            <label for="taller-select-extraescolares" class="form-label">Selecciona el Taller (Escola - Activitat)</label>
+            <select id="taller-select-extraescolares" class="form-select">
+                <option value="">Cargando talleres...</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="alumnos-input-extraescolares" class="form-label">Número de Alumnos</label>
+            <input type="number" id="alumnos-input-extraescolares" class="form-input" placeholder="El número de alumnos se cargará automáticamente" readonly>
+        </div>
+
+        <div id="results-container-extraescolares" style="margin-top: 1.5rem;">
+            <p>Selecciona un taller para ver los resultados.</p>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #ddd;">
+          <button class="btn" onclick="this.closest('.modal').remove()">
+            <i class="fas fa-times"></i> Cerrar
+          </button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+    
+    google.script.run
+        .withSuccessHandler(populateTallerDropdownExtraescolares)
+        .withFailureHandler(showErrorExtraescolares)
+        .getTalleresData();
+}
+
+function populateTallerDropdownExtraescolares(talleres) {
+    const select = document.getElementById('taller-select-extraescolares');
+    select.innerHTML = '<option value="">-- Selecciona un taller --</option>';
+    
+    talleres.forEach(taller => {
+        const option = document.createElement('option');
+        option.value = taller.id;
+        option.textContent = `${taller.escuela} - ${taller.actividad}`;
+        option.dataset.alumnos = taller.alumnos;
+        select.appendChild(option);
+    });
+
+    select.addEventListener('change', (event) => {
+        const selectedOption = event.target.options[event.target.selectedIndex];
+        const alumnos = selectedOption.dataset.alumnos || '';
+        document.getElementById('alumnos-input-extraescolares').value = alumnos;
+        
+        if (selectedOption.value) {
+            handleCalculateExtraescolares(selectedOption);
+        }
+    });
+}
+
+function handleCalculateExtraescolares(selectedOption) {
+    const tallerId = selectedOption.value;
+    
+    if (!tallerId) {
+        showAlertExtraescolares('Por favor, selecciona un taller.', 'danger');
+        return;
+    }
+
+    const tallerData = {
+        id: tallerId,
+        alumnos: selectedOption.dataset.alumnos,
+        actividad: selectedOption.textContent.split(' - ')[1]
+    };
+
+    document.getElementById('results-container-extraescolares').innerHTML = '<p>Calculando...</p>';
+
+    google.script.run
+        .withSuccessHandler(displayResultsExtraescolares)
+        .withFailureHandler(showErrorExtraescolares)
+        .calculateMaterialesTaller(tallerData);
+}
+
+function displayResultsExtraescolares(results) {
+    const container = document.getElementById('results-container-extraescolares');
+    
+    if (results.error) {
+        showErrorExtraescolares({ message: results.error });
+        return;
+    }
+
+    if (Object.keys(results.colorTotals).length === 0) {
+        container.innerHTML = '<p>No se encontraron figuras o materiales para este taller.</p>';
+        return;
+    }
+
+    let html = '<h4>Resumen de Material Necesario:</h4><ul>';
+    for (const color in results.colorTotals) {
+        html += `<li><strong>${color}:</strong> ${results.colorTotals[color].toFixed(2)}g</li>`;
+    }
+    html += '</ul>';
+    container.innerHTML = html;
+}
+
+function showErrorExtraescolares(error) {
+    showAlertExtraescolares(`Error: ${error.message}`, 'danger');
+}
+
+function showAlertExtraescolares(message, type) {
+    const container = document.getElementById('alert-container-extraescolares');
+    container.innerHTML = `<div class="alert alert-${type}" style="background-color: #f8d7da; color: #721c24; padding: 10px; border-radius: 4px;">${message}</div>`;
+}
 
   function mostrarCalculadoraMultiple() {
     const modal = document.createElement('div');

@@ -51,11 +51,6 @@ function initializeSheets() {
  * @param {string} sheetName - Nombre de la hoja.
  * @returns {Sheet} - Objeto de la hoja.
  */
-/**
- * Obtiene o crea una hoja específica si no existe.
- * @param {string} sheetName - Nombre de la hoja.
- * @returns {Sheet} - Objeto de la hoja.
- */
 function getOrCreateSheet(sheetName) {
   const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
   let sheet = spreadsheet.getSheetByName(sheetName);
@@ -473,13 +468,20 @@ function debugSheetData() {
   
   Logger.log('=== CONTENIDO DE LA HOJA FIGURAS ===');
   data.forEach((row, index) => {
-    Logger.log(`Fila ${index}:`);
-    Logger.log(`  ID: ${row[0]}`);
-    Logger.log(`  Nombre: ${row[1]}`);
-    Logger.log(`  Parte: ${row[2]}`);
-    Logger.log(`  Detalles: ${row[3]}`);
-    Logger.log(`  Datos JSON: ${row[4]}`);
-    Logger.log('  ---');
+    Logger.log(`Fila ${index}:
+` + 
+      `  ID: ${row[0]}
+` + 
+      `  Nombre: ${row[1]}
+` + 
+      `  Parte: ${row[2]}
+` + 
+      `  Detalles: ${row[3]}
+` + 
+      `  Datos JSON: ${row[4]}
+` + 
+      `  ---
+`);
   });
 }
 /**
@@ -617,13 +619,20 @@ function testFigureData(figureId) {
   
   // Mostrar todas las filas para debugging
   data.forEach((row, index) => {
-    Logger.log(`Fila ${index}:`);
-    Logger.log('ID: "' + row[0] + '"');
-    Logger.log('Nombre: "' + row[1] + '"');
-    Logger.log('Parte: "' + row[2] + '"');
-    Logger.log('Detalles: "' + row[3] + '"');
-    Logger.log('JSON: "' + row[4] + '"');
-    Logger.log('---');
+    Logger.log(`Fila ${index}:
+` + 
+      `ID: "${row[0]}"
+` + 
+      `Nombre: "${row[1]}"
+` + 
+      `Parte: "${row[2]}"
+` + 
+      `Detalles: "${row[3]}"
+` + 
+      `JSON: "${row[4]}"
+` + 
+      `---
+`);
   });
   
   // Buscar la figura específica
@@ -660,18 +669,20 @@ function debugFigure(figureId) {
   // Mostrar datos de cada fila
   data.forEach((row, index) => {
     if (index > 0) {  // Saltar encabezados
-      Logger.log(`\nFila ${index}:`);
-      Logger.log(`ID: "${row[0]}"`);
-      Logger.log(`Nombre: "${row[1]}"`);
-      Logger.log(`Parte: "${row[2]}"`);
-      Logger.log(`Detalles: "${row[3]}"`);
-      Logger.log(`JSON: "${row[4]}"`);
+      Logger.log(`
+Fila ${index}:
+ID: "${row[0]}"
+Nombre: "${row[1]}"
+Parte: "${row[2]}"
+Detalles: "${row[3]}"
+JSON: "${row[4]}"`);
     }
   });
   
   // Intentar obtener la figura
   const figura = getFigureById(figureId);
-  Logger.log('\nResultado de getFigureById:');
+  Logger.log('
+Resultado de getFigureById:');
   Logger.log(JSON.stringify(figura, null, 2));
 }
 
@@ -885,4 +896,123 @@ function doGet(e) {
       .setWidth(1200)
       .setHeight(800)
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}
+
+/**
+ * Obtiene los datos de los talleres para la calculadora.
+ * @returns {Array} Lista de objetos de taller.
+ */
+function getTalleresData() {
+  try {
+    const sheet = getOrCreateSheet('Talleres');
+    const data = sheet.getDataRange().getValues();
+    const talleres = [];
+    
+    // Empezar desde 1 para saltar encabezados
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][1] && data[i][2]) { // Asegurarse de que escuela y curso no estén vacíos
+        talleres.push({
+          id: `taller_${i}`,
+          escuela: data[i][1],
+          actividad: data[i][2],
+          alumnos: data[i][3],
+          figuras: data[i][4] 
+        });
+      }
+    }
+    return talleres;
+  } catch (error) {
+    Logger.log('Error en getTalleresData: ' + error.message);
+    return [];
+  }
+}
+
+/**
+ * Busca figuras en la hoja "Figuras" cuyo nombre contenga una parte específica.
+ * @param {string} namePart - La parte del nombre a buscar (ej: "JC1").
+ * @returns {Array} - Un array de objetos de figura encontrados.
+ */
+function getFiguresByNamePart(namePart) {
+  try {
+    const sheet = getOrCreateSheet('Figuras');
+    const data = sheet.getDataRange().getValues();
+    const figures = [];
+    
+    for (let i = 1; i < data.length; i++) {
+      const figureName = data[i][1]; // Columna "Nombre"
+      if (figureName && figureName.includes(namePart)) {
+        const figure = getFigureById(data[i][0]);
+        if (figure) {
+          figures.push(figure);
+        }
+      }
+    }
+    return figures;
+  } catch (error) {
+    Logger.log('Error en getFiguresByNamePart: ' + error.message);
+    return [];
+  }
+}
+
+
+/**
+ * Calcula los materiales totales para un taller específico.
+ * @param {Object} tallerData - Datos del taller seleccionado.
+ * @returns {Object} - Objeto con los totales de color o un error.
+ */
+function calculateMaterialesTaller(tallerData) {
+  try {
+    const studentCount = parseInt(tallerData.alumnos);
+    if (isNaN(studentCount) || studentCount <= 0) {
+      throw new Error('Número de alumnos no válido.');
+    }
+
+    const activityMap = {
+      'HC1': 'JC1',
+      'HC2': 'JC2'
+    };
+    const activity = tallerData.actividad;
+    const searchNamePart = activityMap[activity] || activity;
+
+    const figuresToProcess = getFiguresByNamePart(searchNamePart);
+
+    if (figuresToProcess.length === 0) {
+      return { error: `No se encontraron figuras que contengan "${searchNamePart}" en su nombre.` };
+    }
+
+    const colorTotals = {};
+    const weights = getLetterWeights();
+
+    figuresToProcess.forEach(figure => {
+      if (!figure.rows) return;
+
+      figure.rows.forEach(row => {
+        const color = row.color.toLowerCase();
+        let totalAmountForColor = 0;
+
+        for (const letter in row.letters) {
+          const amount = parseFloat(row.letters[letter]) || 0;
+          const weight = weights[letter] || 0;
+          totalAmountForColor += amount * weight;
+        }
+        
+        totalAmountForColor *= (parseFloat(row.units) || 1);
+
+        if (!colorTotals[color]) {
+          colorTotals[color] = 0;
+        }
+        colorTotals[color] += totalAmountForColor;
+      });
+    });
+
+    for (const color in colorTotals) {
+      colorTotals[color] *= studentCount;
+    }
+
+    return { colorTotals: colorTotals };
+
+  } catch (error) {
+    Logger.log('Error en calculateMaterialesTaller: ' + error.message);
+    return { error: error.message };
+  }
 }

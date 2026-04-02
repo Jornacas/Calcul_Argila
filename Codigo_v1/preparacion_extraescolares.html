@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Preparación de Extraescolares - CalculArgila</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        /* Estilos generales (similares a los de tu app principal) */
+        :root {
+            --primary: #2196F3;
+            --primary-dark: #1976D2;
+            --secondary: #03A9F4;
+            --light: #F5F9FC;
+            --dark: #263238;
+            --success: #4CAF50;
+            --warning: #FFA726;
+            --gray-light: #ECEFF1;
+            --gray: #B0BEC5;
+            --space-md: 1rem;
+            --border-radius: 4px;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
+        }
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            margin: 0;
+            padding: var(--space-md);
+            background: #f8f9fa;
+            color: var(--dark);
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: var(--shadow-sm);
+            padding: var(--space-md);
+        }
+        .header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            color: var(--primary);
+        }
+        .header-icon {
+            font-size: 24px;
+            margin-right: 12px;
+        }
+        h1 {
+            font-size: 1.5rem;
+            font-weight: 500;
+            margin: 0;
+        }
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        .form-label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 500;
+        }
+        .form-select, .form-input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid var(--gray);
+            border-radius: var(--border-radius);
+            font-size: 1rem;
+        }
+        .btn {
+            padding: 10px 15px;
+            background: var(--primary);
+            border: none;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            color: white;
+            font-size: 1rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .btn:hover {
+            background: var(--primary-dark);
+        }
+        .results-section {
+            margin-top: 2rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--gray-light);
+        }
+        h2 {
+            font-size: 1.2rem;
+            color: var(--primary);
+            margin-bottom: 1rem;
+        }
+        #results-container {
+            background: var(--light);
+            padding: 1rem;
+            border-radius: var(--border-radius);
+            min-height: 100px;
+        }
+        .loader {
+            display: none;
+            text-align: center;
+            padding: 1rem;
+        }
+        .alert {
+            padding: 10px 12px;
+            border-radius: var(--border-radius);
+            margin-bottom: 12px;
+            font-size: 0.9rem;
+        }
+        .alert-danger {
+            background: #F8D7DA;
+            border: 1px solid #F5C6CB;
+            color: #721C24;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <i class="fas fa-calculator header-icon"></i>
+            <h1>Preparación de Extraescolares</h1>
+        </div>
+
+        <div id="alert-container"></div>
+
+        <div class="form-group">
+            <label for="taller-select" class="form-label">Selecciona el Taller (Escola - Activitat)</label>
+            <select id="taller-select" class="form-select">
+                <option value="">Cargando talleres...</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="alumnos-input" class="form-label">Número de Alumnos</label>
+            <input type="number" id="alumnos-input" class="form-input" placeholder="El número de alumnos se cargará automáticamente" readonly>
+        </div>
+
+        <button class="btn" onclick="handleCalculate()">
+            <i class="fas fa-cogs"></i> Calcular Material
+        </button>
+
+        <div class="loader">
+            <p>Calculando...</p>
+        </div>
+
+        <div class="results-section">
+            <h2><i class="fas fa-paint-brush"></i> Resumen de Material Necesario</h2>
+            <div id="results-container">
+                <p>Selecciona un taller y haz clic en "Calcular Material" para ver los resultados.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Lógica del cliente para la calculadora
+        document.addEventListener('DOMContentLoaded', () => {
+            // Cargar los datos de los talleres al iniciar
+            google.script.run
+                .withSuccessHandler(populateTallerDropdown)
+                .withFailureHandler(showError)
+                .getTalleresData();
+        });
+
+        function populateTallerDropdown(talleres) {
+            const select = document.getElementById('taller-select');
+            select.innerHTML = '<option value="">-- Selecciona un taller --</option>';
+            
+            talleres.forEach(taller => {
+                // Guardamos los datos del taller en atributos data-*
+                const option = document.createElement('option');
+                option.value = taller.id; // Un ID único para cada taller
+                option.textContent = `${taller.escuela} - ${taller.actividad}`;
+                option.dataset.alumnos = taller.alumnos;
+                option.dataset.figuras = taller.figuras; // Nombres de las figuras o IDs
+                select.appendChild(option);
+            });
+
+            // Evento para actualizar el número de alumnos al cambiar la selección
+            select.addEventListener('change', (event) => {
+                const selectedOption = event.target.options[event.target.selectedIndex];
+                const alumnos = selectedOption.dataset.alumnos || '';
+                document.getElementById('alumnos-input').value = alumnos;
+            });
+        }
+
+        function handleCalculate() {
+            const select = document.getElementById('taller-select');
+            const selectedOption = select.options[select.selectedIndex];
+            const tallerId = selectedOption.value;
+            
+            if (!tallerId) {
+                showAlert('Por favor, selecciona un taller.', 'danger');
+                return;
+            }
+
+            const tallerData = {
+                id: tallerId,
+                alumnos: selectedOption.dataset.alumnos,
+                actividad: selectedOption.textContent.split(' - ')[1]
+            };
+
+            showLoader(true);
+            document.getElementById('results-container').innerHTML = '';
+
+            google.script.run
+                .withSuccessHandler(displayResults)
+                .withFailureHandler(showError)
+                .calculateMaterialesTaller(tallerData);
+        }
+
+        function displayResults(results) {
+            showLoader(false);
+            const container = document.getElementById('results-container');
+            
+            if (results.error) {
+                showError({ message: results.error });
+                return;
+            }
+
+            if (Object.keys(results.colorTotals).length === 0) {
+                container.innerHTML = '<p>No se encontraron figuras o materiales para este taller.</p>';
+                return;
+            }
+
+            let html = '<ul>';
+            for (const color in results.colorTotals) {
+                html += `<li><strong>${color}:</strong> ${results.colorTotals[color]}g</li>`;
+            }
+            html += '</ul>';
+            container.innerHTML = html;
+        }
+
+        function showError(error) {
+            showLoader(false);
+            showAlert(`Error: ${error.message}`, 'danger');
+        }
+
+        function showAlert(message, type) {
+            const container = document.getElementById('alert-container');
+            container.innerHTML = `<div class="alert alert-${type}">${message}</div>`;
+        }
+
+        function showLoader(isLoading) {
+            document.querySelector('.loader').style.display = isLoading ? 'block' : 'none';
+        }
+
+    </script>
+</body>
+</html>
